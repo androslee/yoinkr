@@ -1,0 +1,3 @@
+{
+ "name":"yoinkr-mqtt-explorer","displayName":"Yoinkr MQTT Explorer","description":"MQTT topics, JSON/hex payloads and publishing using recovered MQTT Explorer core in a VS Code host adapter.","version":"0.1.0","publisher":"local-yoinkr","engines":{"vscode":"^1.90.0"},"main":"./extension.cjs","activationEvents":["onCommand:yoinkr.mqtt.open"],"categories":["Other"],"contributes":{"commands":[{"command":"yoinkr.mqtt.open","title":"Yoinkr: Open MQTT Explorer"}]},"capabilities":{"untrustedWorkspaces":{"supported":false}},"extensionKind":["ui"]
+}

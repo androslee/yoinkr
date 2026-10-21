@@ -1,0 +1,9 @@
+{
+  "schema": 1,
+  "synthetic": true,
+  "topic": "yoinkr/demo/payload",
+  "baseline": "{\"temperature\":20,\"status\":\"idle\"}",
+  "current": "{\"temperature\":23,\"status\":\"running\"}",
+  "unicode": "Hello, 世界 ☀️",
+  "scope": "Manual practice data; the frozen shared suite defines automated acceptance."
+}

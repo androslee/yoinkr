@@ -1,0 +1,29 @@
+# Dependencies, tooling and local application/runtime copies
+node_modules/
+.tools/
+builds/
+backups/
+# Investigations may contain recovered third-party code and private paths.
+cases/
+evidence/
+reports/
+findings/
+# Per-user agent registrations, generated client fragments and session results
+/agent.json
+/mcp-client.json
+/mcp-with-rea.json
+/modkit-agent-output/
+/agent-output/
+.env
+.env.*
+*.log
+
+# Machine-specific portable-delivery inputs and generated runs
+/delivery.local.json
+/delivery-output/
+
+# Previous project name, retained private local outputs
+/modkit-agent-output/
+
+# Yoinkr standalone client fragment
+/yoinkr-client.json

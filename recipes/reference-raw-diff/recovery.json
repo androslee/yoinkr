@@ -1,0 +1,157 @@
+{
+  "schema": 1,
+  "kind": "recovered-feature-recipe",
+  "id": "mqtt-raw-diff",
+  "revision": "35f31973c456a024a37450f5961e4610dc9a9ce0",
+  "bundleLayout": "webpack5-eval-source-map-single-source-v1",
+  "bundleFiles": [
+    "app/build/app.bundle.js",
+    "app/build/src_components_Layout_ContentView_tsx.js"
+  ],
+  "files": [
+    {
+      "path": "app/src/components/Sidebar/ValueRenderer/ValueRenderer.tsx",
+      "sha256": "48f280735a84ad9b4437c03d7957419bf4a3f2dc92f444af68f13168cc36ce6d"
+    },
+    {
+      "path": "app/src/components/Sidebar/ValueRenderer/ActionButtons.tsx",
+      "sha256": "f45928db2c62951ece79c120a724b914a40eeef7b0ce4f131a34d9fc66c7a1c5"
+    },
+    {
+      "path": "app/src/components/Sidebar/HistoryDrawer.tsx",
+      "sha256": "7eec27fe421a59c583eea4262ca70b9ee05e818fa1ee7cc999f3c6a19639cee2"
+    },
+    {
+      "path": "app/src/components/Sidebar/CodeBlockColors.ts",
+      "sha256": "d854add77d869a07ca14eb481dc92c8dd4f571486d1e3d8ac6b6dceae2eb7109"
+    },
+    {
+      "path": "app/src/utils/handleTextSelectWithCtrlA.ts",
+      "sha256": "70c308433434d6f5c200fb73c10abe09198df35292d1412ffac31052c756f10d"
+    },
+    {
+      "path": "app/src/theme.ts",
+      "sha256": "47b49bd53002a982e8d1470158b8b8cbe1aba28bbc5e075160e0e5f5a2464be6"
+    },
+    {
+      "path": "backend/src/Model/Base64Message.ts",
+      "sha256": "776c221aa3637064db00e9d0ef0b79e96f37e0eb37cc46dbe0beb85f85a1eda4"
+    },
+    {
+      "path": "backend/src/Model/Decoder.ts",
+      "sha256": "44d3486c6ad604214f399882dfa3601ce3360b7a8bf4b63ad30b262ab1002bce"
+    },
+    {
+      "path": "backend/src/JsonAstParser.ts",
+      "sha256": "454d329c7626acb146cd8aa66b266980051507dc0cd984d613dc79d82e8db8f2"
+    },
+    {
+      "path": "app/src/components/Sidebar/CodeDiff/index.tsx",
+      "sha256": "27128bb8daab7288785c3fae40ae567a8e4f76d994602ae018b965a59ce8b0f0"
+    },
+    {
+      "path": "app/src/components/Sidebar/CodeDiff/Gutters.tsx",
+      "sha256": "9b6a08f1d539baef777c8031e20c1c1d0ab54aed121fce4256f6e28af1c4e223"
+    },
+    {
+      "path": "app/src/components/Sidebar/CodeDiff/DiffCount.tsx",
+      "sha256": "3296b89c114f8f0bb8509d7e7f5deba26dc68cd497a5481cb9ae6655223eec7c"
+    },
+    {
+      "path": "app/src/components/Sidebar/CodeDiff/style.tsx",
+      "sha256": "09e5641cebec8eb3726dd4d9ac466d33367c5a298834245494ea1aa75fa93a30"
+    },
+    {
+      "path": "app/src/components/Sidebar/CodeDiff/util.tsx",
+      "sha256": "d09fa6a0111fe37107ec2569e47c3c322c4df47088e2fc1ab10135be20e6536e"
+    }
+  ],
+  "boundaries": [
+    {
+      "path": "app/src/components/hooks/useDecoder.ts",
+      "adapter": "decoder.ts",
+      "reason": "Explicit plain-message state; Sparkplug/custom decoders excluded."
+    },
+    {
+      "path": "app/src/actions/index.ts",
+      "adapter": "actions.ts",
+      "reason": "Only Raw/Diff setting dispatch; excludes donor application action graph."
+    },
+    {
+      "path": "app/src/components/Sidebar/CodeDiff/ChartPreview.tsx",
+      "adapter": "chart.tsx",
+      "reason": "Plotting excluded; visibly disabled original cross-feature link."
+    }
+  ],
+  "limits": {
+    "payloadBytes": 131072,
+    "historyMessages": 64
+  },
+  "capabilities": {
+    "required": [
+      "clipboard.writeText"
+    ],
+    "optional": []
+  },
+  "scope": {
+    "recovered": [
+      "Raw/Diff controls",
+      "ValueRenderer",
+      "CodeDiff and gutters/counts/Prism",
+      "HistoryDrawer",
+      "themes",
+      "Base64Message formatting"
+    ],
+    "adaptations": [
+      "Explicit immutable message inputs refresh without donor stale subscriptions",
+      "History selection state and clipboard host boundary",
+      "Disabled chart links",
+      "Component empty strings do not remove a topic",
+      "Preserve original newest-first display order while selected indices address chronological input messages"
+    ],
+    "excluded": [
+      "Whole DetailsTab and MQTT connection state",
+      "Topic plots",
+      "Sparkplug/custom decoder",
+      "Save-file and publish/delete controls"
+    ]
+  },
+  "inputs": [
+    {
+      "path": "app/build/app.bundle.js",
+      "sha256": "594d961b958d8fe39c1199e81f9c8434ca974ec2ec336c083c782507691a477a"
+    },
+    {
+      "path": "app/build/src_components_Layout_ContentView_tsx.js",
+      "sha256": "ddeaa9dfd73f71746c32dec1f8f7859104531aa8d81fa23c52ced8364ece958f"
+    },
+    {
+      "path": "MODKIT-NPM-LOCKS/renderer.json",
+      "sha256": "7d4b2799994f47676ab6279e00197a3aec07889cf91ae32509b24b4acbd6888f"
+    },
+    {
+      "path": "MODKIT-NPM-LOCKS/root.json",
+      "sha256": "dd783c9dada297769b07aea64e29832c3925c697f05c43b50ae49002deaeec72"
+    },
+    {
+      "path": "LICENSE.md",
+      "sha256": "3520bf0de0363d9386e9747826473419e1260d01326d02f2ef9e6ade76b30bdd"
+    }
+  ],
+  "patches": [
+    {
+      "path": "app/src/components/Sidebar/CodeDiff/DiffCount.tsx",
+      "find": ".reduce((a, b) => a + b)",
+      "replace": ".reduce((a, b) => a + b, 0)",
+      "count": 2,
+      "reason": "Direct empty component input yields zero changes; original reduce without initial value crashes. MQTT app removes empty topics before this path."
+    },
+    {
+      "path": "app/src/components/Sidebar/CodeDiff/index.tsx",
+      "find": "targetSelector: 'pre ~ pre'",
+      "replace": "targetSelector: ':scope > pre'",
+      "count": 1,
+      "reason": "Current donor gutters wrap their pre in a span, so the legacy sibling selector misses the code. Select the direct child code pre for Ctrl+A."
+    }
+  ]
+}

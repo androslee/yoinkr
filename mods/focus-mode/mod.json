@@ -1,0 +1,10 @@
+{
+  "schema": 1,
+  "id": "focus-mode",
+  "name": "Portable focus mode (fixture adapters)",
+  "version": "0.1.0",
+  "entry": "entry.js",
+  "targets": [{"app": "fixture-a", "versions": "*"}, {"app": "fixture-b", "versions": "*"}],
+  "touches": {"dom": ["[data-yoinkr-focus-hidden]"], "globals": ["window.__modkitFocus"]},
+  "provenance": {"source": "Original reusable behavior and two fixture adapters; no donor app code"}
+}

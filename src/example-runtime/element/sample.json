@@ -1,0 +1,7 @@
+[
+ {"id":"1","room":"Studio planning","sender":"Mara","text":"The launch checklist is ready. Camera, microphone, captions, and the starting-soon scene all checked."},
+ {"id":"2","room":"Studio planning","sender":"Jules","text":"Launch checklist update: please test the guest microphone before the interview."},
+ {"id":"3","room":"Community","sender":"River","text":"The new overlay looks great. Could we add live annotations during the art tutorial?"},
+ {"id":"4","room":"Studio planning","sender":"Mara","text":"Added the guest audio check. We can launch at 19:00."},
+ {"id":"5","room":"Community","sender":"Jules","text":"Screenshot review: <script>alert('this is plain text')</script> stays harmless text."}
+]

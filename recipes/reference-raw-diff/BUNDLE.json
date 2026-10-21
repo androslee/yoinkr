@@ -1,0 +1,53 @@
+{
+  "schema": 1,
+  "kind": "modkit-portable-recipes",
+  "id": "mqtt-raw-diff-two-hosts",
+  "modkitVersion": "0.28.0",
+  "platform": "linux",
+  "arch": "x64",
+  "windows": "unsupported-native-lane-not-verified",
+  "distribution": "recipes-only-local-donor-inputs",
+  "files": [
+    {
+      "path": "baseline.json",
+      "sha256": "c6c80e0726fa75a7b4bc74e5bb1f417a5482490d7b7f292703d40c5dd5e62a86",
+      "bytes": 34348
+    },
+    {
+      "path": "GUIDE.md",
+      "sha256": "7a99453c5597c6e7742450b77065e50ec6bdb8a273d95950a22e86da76150e70",
+      "bytes": 11203
+    },
+    {
+      "path": "joplin.json",
+      "sha256": "5d45bec219649d9a4f73575f8aab9d7424b9128a702a7a6024a7c19332f331b2",
+      "bytes": 1521
+    },
+    {
+      "path": "NOTICE.md",
+      "sha256": "76a91075de4bc64946ec01c081d2f541a53a827118f364dd72f13a607ac7e3e6",
+      "bytes": 928
+    },
+    {
+      "path": "recovery.json",
+      "sha256": "609bb5cb9ac66f823f36b86e28b00f18573147b384490d46ce160d936c9ff9b1",
+      "bytes": 5463
+    },
+    {
+      "path": "samples.json",
+      "sha256": "6bdb78d8f0111d6d8d675dbd213d0c79464bd4b1f348b4b435d7a0849cd80150",
+      "bytes": 318
+    },
+    {
+      "path": "suite.json",
+      "sha256": "4ba56600dfa5f544b474ff09b840f2584aa0ae9484815ed1c5ab55cd7a6e9c7b",
+      "bytes": 24791
+    },
+    {
+      "path": "vscode.json",
+      "sha256": "1e9c1830280c2ac9745550543fc51586686425f7a31fd97b0c25e04c1de313dd",
+      "bytes": 1570
+    }
+  ],
+  "digest": "2dfd1552326970d0a7900a5396ba2b034ccffc3a0f3290c95c266f64825617a5"
+}

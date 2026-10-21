@@ -1,0 +1,603 @@
+{
+  "schema": 1,
+  "kind": "feature-baseline-recipe",
+  "id": "mqtt-raw-diff",
+  "title": "Original MQTT Explorer Raw/Diff payload comparison",
+  "donor": {
+    "revision": "35f31973c456a024a37450f5961e4610dc9a9ce0",
+    "sourceFiles": [
+      "app/src/components/Sidebar/ValueRenderer/ValueRenderer.tsx",
+      "app/src/components/Sidebar/ValueRenderer/ActionButtons.tsx",
+      "app/src/components/Sidebar/ValueRenderer/ValuePanel.tsx",
+      "app/src/components/Sidebar/ValueRenderer/MessageHistory.tsx",
+      "app/src/components/Sidebar/CodeDiff/index.tsx",
+      "app/src/components/Sidebar/CodeDiff/DiffCount.tsx",
+      "app/src/components/Sidebar/CodeDiff/Gutters.tsx",
+      "app/src/components/Sidebar/CodeDiff/style.tsx",
+      "app/src/components/Sidebar/CodeDiff/util.tsx",
+      "backend/src/Model/Message.ts",
+      "app/src/components/Sidebar/DetailsTab.tsx",
+      "app/src/components/hooks/useDecoder.ts",
+      "app/src/actions/Tree.ts"
+    ],
+    "pageSuffix": "/app/build/index.html"
+  },
+  "scope": {
+    "required": [
+      "Original Raw/Diff controls and code renderer",
+      "Current versus previous message JSON comparison",
+      "Explicit history selection and deselection",
+      "Text, malformed JSON, Unicode and empty-message behavior",
+      "Topic switching without a stale comparison",
+      "Keyboard selection, copying, resizing and theme changes",
+      "Explicit topic re-selection after new messages; donor live-refresh defect is retained as a documented deviation for future adaptation",
+      "Empty MQTT payload removes the selected topic in this donor; this is application behavior, not a component empty-string oracle"
+    ],
+    "optional": [
+      "File save via host-selected file dialog",
+      "Numeric literal and topic plotting links"
+    ],
+    "excluded": [
+      "MQTT connection-profile migration",
+      "Publishing and retained-topic deletion in the recipient",
+      "SparkplugB and custom decoder UI",
+      "Whole sidebar and chart-panel transfer"
+    ]
+  },
+  "stepTimeoutMs": 5000,
+  "dependencies": [
+    {
+      "name": "Original React comparison UI",
+      "disposition": "recover",
+      "reason": "ValueRenderer, ActionButtons, CodeDiff, styles and counters are the primary visible donor implementation.",
+      "sourcePaths": [
+        "app/src/components/Sidebar/ValueRenderer/ValueRenderer.tsx",
+        "app/src/components/Sidebar/ValueRenderer/ActionButtons.tsx",
+        "app/src/components/Sidebar/ValueRenderer/ValuePanel.tsx",
+        "app/src/components/Sidebar/ValueRenderer/MessageHistory.tsx",
+        "app/src/components/Sidebar/CodeDiff/index.tsx",
+        "app/src/components/Sidebar/CodeDiff/DiffCount.tsx",
+        "app/src/components/Sidebar/CodeDiff/Gutters.tsx",
+        "app/src/components/Sidebar/CodeDiff/style.tsx",
+        "app/src/components/Sidebar/CodeDiff/util.tsx",
+        "app/src/components/Sidebar/DetailsTab.tsx"
+      ]
+    },
+    {
+      "name": "React, Redux, MUI, Prism and diff",
+      "disposition": "external",
+      "reason": "Exact installed versions and their transitive dependencies must be retained; package isolation is milestone 18.",
+      "sourcePaths": [
+        "app/package.json",
+        "app/yarn.lock"
+      ]
+    },
+    {
+      "name": "Message models and decoder state",
+      "disposition": "boundary-adaptation",
+      "reason": "TreeNode/history/decoder inputs must be supplied through an explicit contract; a complete dependency closure is not yet proven.",
+      "sourcePaths": [
+        "app/src/components/Sidebar/ValueRenderer/ValueRenderer.tsx"
+      ]
+    },
+    {
+      "name": "Clipboard and optional file save",
+      "disposition": "host-service",
+      "reason": "Native access belongs to the recipient adapter, not implicit donor globals.",
+      "sourcePaths": [
+        "app/src/components/Sidebar/ValueRenderer/ValuePanel.tsx"
+      ]
+    },
+    {
+      "name": "Plotting, Sparkplug and lazy imports",
+      "disposition": "unresolved",
+      "reason": "Gutters/history/decoder hooks cross the proposed boundary; classify before package completion.",
+      "sourcePaths": [
+        "app/src/components/Sidebar/CodeDiff/Gutters.tsx",
+        "app/src/components/Sidebar/ValueRenderer/MessageHistory.tsx"
+      ]
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "connection-and-empty",
+      "title": "Original application connection and empty selection",
+      "steps": [
+        {
+          "action": "assert",
+          "selector": "body",
+          "property": "text",
+          "expected": "Select a topic to view details",
+          "match": "contains"
+        },
+        {
+          "action": "fill",
+          "selector": "input[placeholder=\"broker.example.com\"]",
+          "value": "127.0.0.1"
+        },
+        {
+          "action": "fill",
+          "selector": "input[placeholder=\"1883\"]",
+          "value": "{{brokerPort}}"
+        },
+        {
+          "action": "click",
+          "selector": "[data-testid=\"connect-button\"]"
+        },
+        {
+          "action": "assert",
+          "selector": "[aria-label=\"Topic: 127.0.0.1\"]",
+          "property": "visible",
+          "expected": true,
+          "match": "equals"
+        }
+      ]
+    },
+    {
+      "id": "json-previous",
+      "title": "JSON comparison against previous message",
+      "steps": [
+        {
+          "action": "publish",
+          "topic": "baseline/value",
+          "payload": "{\"temperature\":20,\"state\":\"idle\"}"
+        },
+        {
+          "action": "publish",
+          "topic": "baseline/value",
+          "payload": "{\"temperature\":24,\"state\":\"running\"}"
+        },
+        {
+          "action": "assert",
+          "selector": "[aria-label=\"Topic: baseline\"]",
+          "property": "visible",
+          "expected": true,
+          "match": "equals"
+        },
+        {
+          "action": "click",
+          "selector": "[aria-label=\"Topic: baseline\"]"
+        },
+        {
+          "action": "assert",
+          "selector": "[aria-label=\"Topic: value\"]",
+          "property": "visible",
+          "expected": true,
+          "match": "equals"
+        },
+        {
+          "action": "click",
+          "selector": "[aria-label=\"Topic: value\"]"
+        },
+        {
+          "action": "assert",
+          "selector": "pre[class*=\"CodeDiff-codeBlock-\"]:visible >> nth=0",
+          "property": "text",
+          "expected": "24",
+          "match": "contains"
+        },
+        {
+          "action": "click",
+          "selector": "#valueRendererDisplayMode-diff"
+        },
+        {
+          "action": "assert",
+          "selector": "#valueRendererDisplayMode-diff",
+          "property": "aria-pressed",
+          "expected": "true",
+          "match": "equals"
+        },
+        {
+          "action": "assert",
+          "selector": "body",
+          "property": "text",
+          "expected": "Comparing with previous message",
+          "match": "contains"
+        },
+        {
+          "action": "assert",
+          "selector": "body",
+          "property": "text",
+          "expected": "+ 2 lines",
+          "match": "contains"
+        },
+        {
+          "action": "assert",
+          "selector": "body",
+          "property": "text",
+          "expected": "- 2 lines",
+          "match": "contains"
+        },
+        {
+          "action": "snapshot",
+          "name": "json-diff"
+        },
+        {
+          "action": "click",
+          "selector": "#valueRendererDisplayMode-raw"
+        },
+        {
+          "action": "assert",
+          "selector": "#valueRendererDisplayMode-raw",
+          "property": "aria-pressed",
+          "expected": "true",
+          "match": "equals"
+        },
+        {
+          "action": "assert",
+          "selector": "pre[class*=\"CodeDiff-codeBlock-\"]:visible >> nth=0",
+          "property": "text",
+          "expected": "24",
+          "match": "contains"
+        },
+        {
+          "action": "snapshot",
+          "name": "json-raw"
+        },
+        {
+          "action": "click",
+          "selector": "[data-testid=\"message-history\"] >> nth=0"
+        },
+        {
+          "action": "assert",
+          "selector": "div[tabindex=\"0\"]:has(> div > span > pre)",
+          "property": "count",
+          "expected": 2,
+          "match": "equals"
+        },
+        {
+          "action": "click",
+          "selector": "div[tabindex=\"0\"]:has(> div > span > pre) >> nth=1"
+        },
+        {
+          "action": "click",
+          "selector": "#valueRendererDisplayMode-diff"
+        },
+        {
+          "action": "assert",
+          "selector": "body",
+          "property": "text",
+          "expected": "Comparing with selected message",
+          "match": "contains"
+        },
+        {
+          "action": "snapshot",
+          "name": "selected-history"
+        },
+        {
+          "action": "click",
+          "selector": "div[tabindex=\"0\"]:has(> div > span > pre) >> nth=1"
+        },
+        {
+          "action": "assert",
+          "selector": "body",
+          "property": "text",
+          "expected": "Comparing with previous message",
+          "match": "contains"
+        },
+        {
+          "action": "click",
+          "selector": "[data-testid=\"message-history\"] >> nth=0"
+        },
+        {
+          "action": "click",
+          "selector": "#valueRendererDisplayMode-raw"
+        },
+        {
+          "action": "press",
+          "selector": "pre[class*=\"CodeDiff-codeBlock-\"]:visible >> nth=0 >> xpath=..",
+          "key": "ControlOrMeta+A"
+        },
+        {
+          "action": "assert",
+          "selector": "body",
+          "property": "selection",
+          "expected": "24",
+          "match": "contains"
+        },
+        {
+          "action": "click",
+          "selector": "[data-testid=\"copy-button\"] >> nth=1"
+        },
+        {
+          "action": "assert",
+          "selector": "body",
+          "property": "clipboard",
+          "expected": "running",
+          "match": "contains"
+        }
+      ]
+    },
+    {
+      "id": "text-and-unicode",
+      "title": "Text and Unicode use original comparison path",
+      "steps": [
+        {
+          "action": "publish",
+          "topic": "baseline/value",
+          "payload": "hello \u03a9 world"
+        },
+        {
+          "action": "assert",
+          "selector": "[aria-label=\"Topic: value\"]",
+          "property": "text",
+          "expected": "hello \u03a9 worl",
+          "match": "contains"
+        },
+        {
+          "action": "click",
+          "selector": "[aria-label=\"Topic: baseline\"]"
+        },
+        {
+          "action": "assert",
+          "selector": "[aria-label=\"Topic: baseline\"]",
+          "property": "aria-selected",
+          "expected": "true",
+          "match": "equals"
+        },
+        {
+          "action": "click",
+          "selector": "[aria-label=\"Topic: baseline\"]"
+        },
+        {
+          "action": "click",
+          "selector": "[aria-label=\"Topic: value\"]"
+        },
+        {
+          "action": "assert",
+          "selector": "[aria-label=\"Topic: value\"]",
+          "property": "aria-selected",
+          "expected": "true",
+          "match": "equals"
+        },
+        {
+          "action": "assert",
+          "selector": "pre[class*=\"CodeDiff-codeBlock-\"]:visible >> nth=0",
+          "property": "text",
+          "expected": "hello \u03a9 world",
+          "match": "contains"
+        },
+        {
+          "action": "click",
+          "selector": "#valueRendererDisplayMode-diff"
+        },
+        {
+          "action": "assert",
+          "selector": "pre[class*=\"CodeDiff-codeBlock-\"]:visible >> nth=0",
+          "property": "text",
+          "expected": "hello \u03a9 world",
+          "match": "contains"
+        },
+        {
+          "action": "snapshot",
+          "name": "unicode"
+        }
+      ]
+    },
+    {
+      "id": "malformed-json",
+      "title": "Malformed JSON stays visible as text",
+      "steps": [
+        {
+          "action": "publish",
+          "topic": "baseline/value",
+          "payload": "{\"broken\":"
+        },
+        {
+          "action": "assert",
+          "selector": "[aria-label=\"Topic: value\"]",
+          "property": "text",
+          "expected": "{\"broken\":",
+          "match": "contains"
+        },
+        {
+          "action": "click",
+          "selector": "[aria-label=\"Topic: baseline\"]"
+        },
+        {
+          "action": "assert",
+          "selector": "[aria-label=\"Topic: baseline\"]",
+          "property": "aria-selected",
+          "expected": "true",
+          "match": "equals"
+        },
+        {
+          "action": "click",
+          "selector": "[aria-label=\"Topic: baseline\"]"
+        },
+        {
+          "action": "click",
+          "selector": "[aria-label=\"Topic: value\"]"
+        },
+        {
+          "action": "assert",
+          "selector": "[aria-label=\"Topic: value\"]",
+          "property": "aria-selected",
+          "expected": "true",
+          "match": "equals"
+        },
+        {
+          "action": "assert",
+          "selector": "pre[class*=\"CodeDiff-codeBlock-\"]:visible >> nth=0",
+          "property": "text",
+          "expected": "{\"broken\":",
+          "match": "contains"
+        },
+        {
+          "action": "snapshot",
+          "name": "malformed"
+        }
+      ]
+    },
+    {
+      "id": "empty-payload",
+      "title": "Original application removes the topic for an empty payload",
+      "steps": [
+        {
+          "action": "publish",
+          "topic": "baseline/value",
+          "payload": ""
+        },
+        {
+          "action": "assert",
+          "selector": "[aria-label=\"Topic: value\"]",
+          "property": "count",
+          "expected": 0,
+          "match": "equals"
+        },
+        {
+          "action": "assert",
+          "selector": "body",
+          "property": "text",
+          "expected": "Select a topic to view details",
+          "match": "contains"
+        },
+        {
+          "action": "assert",
+          "selector": "pre[class*=\"CodeDiff-codeBlock-\"]:visible",
+          "property": "count",
+          "expected": 0,
+          "match": "equals"
+        },
+        {
+          "action": "snapshot",
+          "name": "empty-clears-topic"
+        }
+      ]
+    },
+    {
+      "id": "bounded-large",
+      "title": "Original large-text rendering after a fresh selection",
+      "steps": [
+        {
+          "action": "publish",
+          "topic": "baseline/value",
+          "payload": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxEND-STRESS"
+        },
+        {
+          "action": "assert",
+          "selector": "[aria-label=\"Topic: baseline\"]",
+          "property": "visible",
+          "expected": true,
+          "match": "equals"
+        },
+        {
+          "action": "click",
+          "selector": "[aria-label=\"Topic: baseline\"]"
+        },
+        {
+          "action": "assert",
+          "selector": "[aria-label=\"Topic: value\"]",
+          "property": "text",
+          "expected": "xxxxxxxxxxxx",
+          "match": "contains"
+        },
+        {
+          "action": "click",
+          "selector": "[aria-label=\"Topic: value\"]"
+        },
+        {
+          "action": "assert",
+          "selector": "[aria-label=\"Topic: value\"]",
+          "property": "aria-selected",
+          "expected": "true",
+          "match": "equals"
+        },
+        {
+          "action": "assert",
+          "selector": "pre[class*=\"CodeDiff-codeBlock-\"]:visible >> nth=0",
+          "property": "text",
+          "expected": "END-STRESS",
+          "match": "contains"
+        },
+        {
+          "action": "snapshot",
+          "name": "large-text"
+        }
+      ]
+    },
+    {
+      "id": "topic-switch",
+      "title": "Switch to another topic without stale comparison",
+      "steps": [
+        {
+          "action": "publish",
+          "topic": "baseline/other",
+          "payload": "independent topic"
+        },
+        {
+          "action": "assert",
+          "selector": "[aria-label=\"Topic: other\"]",
+          "property": "visible",
+          "expected": true,
+          "match": "equals"
+        },
+        {
+          "action": "click",
+          "selector": "[aria-label=\"Topic: other\"]"
+        },
+        {
+          "action": "assert",
+          "selector": "pre[class*=\"CodeDiff-codeBlock-\"]:visible >> nth=0",
+          "property": "text",
+          "expected": "independent topic",
+          "match": "contains"
+        },
+        {
+          "action": "assert",
+          "selector": "pre[class*=\"CodeDiff-codeBlock-\"]:visible >> nth=0",
+          "property": "text",
+          "expected": "independent topic",
+          "match": "equals"
+        },
+        {
+          "action": "snapshot",
+          "name": "other-topic"
+        },
+        {
+          "action": "resize",
+          "width": 1100,
+          "height": 800
+        },
+        {
+          "action": "assert",
+          "selector": "#valueRendererDisplayMode-diff",
+          "property": "visible",
+          "expected": true,
+          "match": "equals"
+        },
+        {
+          "action": "click",
+          "selector": "button:has(svg[data-testid=\"MenuIcon\"])"
+        },
+        {
+          "action": "click",
+          "selector": "[data-testid=\"dark-mode-toggle\"]"
+        },
+        {
+          "action": "assert",
+          "selector": "body",
+          "property": "background-color",
+          "expected": "rgb(18, 18, 18)",
+          "match": "equals"
+        },
+        {
+          "action": "press",
+          "selector": "body",
+          "key": "Escape"
+        },
+        {
+          "action": "assert",
+          "selector": "pre[class*=\"CodeDiff-codeBlock-\"]:visible >> nth=0",
+          "property": "text",
+          "expected": "independent topic",
+          "match": "equals"
+        },
+        {
+          "action": "snapshot",
+          "name": "theme-and-resize"
+        }
+      ]
+    }
+  ]
+}

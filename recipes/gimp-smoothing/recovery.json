@@ -1,0 +1,24 @@
+{
+  "schema": 1,
+  "id": "gimp-smoothing",
+  "repository": "https://github.com/GNOME/gimp",
+  "commit": "5a569ea4df7c29416f34bd109b66c8bdb5482292",
+  "inputs": [
+    {
+      "path": "app/paint/gimppaintcore.c",
+      "sha256": "51a932562fff36044a6d6af25907248c42827d295bbc512b247fe1122b86dadf"
+    },
+    {
+      "path": "app/paint/gimppaintoptions.c",
+      "sha256": "49fe32c46526e2341441871da67851c7002c84e83fe87132047f0ce5230e59c9"
+    },
+    {
+      "path": "COPYING",
+      "sha256": "e79e9c8a0c85d735ff98185918ec94ed7d175efc377012787aebcf3b80f0d90b"
+    }
+  ],
+  "symbols": [
+    "gimp_paint_core_smooth_coords"
+  ],
+  "scope": "Original stroke-smoothing function under a bounded GLib/GimpCoords compatibility shim. Does not copy or verify GIMP GTK widgets."
+}

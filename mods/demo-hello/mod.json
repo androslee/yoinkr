@@ -1,0 +1,10 @@
+{
+  "schema": 1,
+  "id": "demo-hello",
+  "name": "Hello banner",
+  "version": "0.1.0",
+  "entry": "entry.js",
+  "targets": [{ "app": "*", "versions": "*", "tested": [] }],
+  "touches": { "dom": ["#yoinkr-banner"], "globals": ["window.__modkitDemo"] },
+  "provenance": { "source": "hand-written demo for yoinkr" }
+}

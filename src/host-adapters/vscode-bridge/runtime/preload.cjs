@@ -1,0 +1,1 @@
+const{contextBridge,ipcRenderer}=require('electron');contextBridge.exposeInMainWorld('modkitNative',Object.freeze({request:value=>ipcRenderer.invoke('modkit:native',value),onState:callback=>{const handler=(_e,value)=>callback(value);ipcRenderer.on('modkit:native:state',handler);return()=>ipcRenderer.removeListener('modkit:native:state',handler)}}));

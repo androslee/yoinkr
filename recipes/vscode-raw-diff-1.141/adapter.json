@@ -1,0 +1,62 @@
+{
+  "schema": 1,
+  "kind": "feature-host-adapter",
+  "id": "vscode-raw-diff-linux-x64-v1",
+  "platform": "linux",
+  "arch": "x64",
+  "target": {
+    "name": "Code",
+    "version": "1.141.0",
+    "main": "./out/main.js",
+    "type": "module"
+  },
+  "files": [
+    {
+      "path": "resources/app/package.json",
+      "sha256": "2f56e9c7bce4eac705c1a055c823b1e354778bb4fa9871e702edb7991e56eb32"
+    },
+    {
+      "path": "resources/app/product.json",
+      "sha256": "4db1f6986c25ce50ac51453c2d08676df542928a9bc61250c4411565a1d23126"
+    },
+    {
+      "path": "resources/app/out/main.js",
+      "sha256": "ed7a30a50335ba38a22a8493361c8bf1c26eab0a1c46f9fe091043f325c55245"
+    },
+    {
+      "path": "resources/app/out/vs/workbench/workbench.desktop.main.js",
+      "sha256": "631c1d79c4f3af9177ca23a70cfe0cf2586a692678bd897af6c869324160d905"
+    },
+    {
+      "path": "resources/app/out/vs/base/parts/sandbox/electron-browser/preload.js",
+      "sha256": "9f7c1e45c572b762835d8e31aa2a632e9505fb1c0866f0c9317149a787c6f34e"
+    },
+    {
+      "path": "code",
+      "sha256": "f36c0ef83163bb3c7b99c5860ce98a5d4055dd6b69d3a4d393d7563e499d3456"
+    }
+  ],
+  "feature": {
+    "id": "mqtt-raw-diff",
+    "digest": "175458a5e1277738fea13466c274b316cc7d1c97ca60bb10dafb6437a07e1187"
+  },
+  "surface": "application-owned comparison tool window",
+  "commands": [
+    "open",
+    "capture-baseline",
+    "compare-selection",
+    "reset"
+  ],
+  "capabilities": [
+    "editor.selection",
+    "theme",
+    "clipboard.writeText",
+    "feature.settings"
+  ],
+  "extensionsUsed": false,
+  "hooks": {
+    "broker": "Dc",
+    "selection": "Dc.on(\"vscode:runAction\",async(t,...i)=>{let n=i[0],r=n.args||[];",
+    "theme": "this.titleService=n;this.themeService=r;this.notificationService=a;"
+  }
+}

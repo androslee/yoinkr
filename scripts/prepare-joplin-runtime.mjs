@@ -1,0 +1,11 @@
+import {extractAll,extractFile} from '@electron/asar';
+import {cp,mkdir,rename,readFile,realpath,lstat} from 'node:fs/promises';
+import {join} from 'node:path';
+import {sha256,saveJson,newDestination} from '../src/workspace.js';
+const [source,output]=process.argv.slice(2);if(!source||!output)throw Error('Use prepare-joplin-runtime.mjs <extracted Joplin 3.7.21 AppImage runtime> <new extracted runtime>');
+const root=await realpath(source),archive=join(root,'resources/app.asar'),info=await lstat(archive);if(!info.isFile()||info.isSymbolicLink()||info.size>512*1024*1024)throw Error('Expected ordinary pinned Joplin archive');
+const originalAsarSha256=sha256(await readFile(archive));if(originalAsarSha256!=='767df409b18effe60421fbefcca873de237c7e813eac744ecdeebbc5e825a33a')throw Error('Unsupported Joplin archive; investigate and rebind this version before extraction');
+const pkg=JSON.parse(extractFile(archive,'package.json'));if(pkg.name!=='@joplin/app-desktop'||pkg.version!=='3.7.21')throw Error('Unsupported Joplin runtime');
+const out=await newDestination(output,[root]);await mkdir(out);await cp(root,out,{recursive:true,verbatimSymlinks:true,force:false,errorOnExist:false});if(sha256(await readFile(join(out,'resources/app.asar')))!==originalAsarSha256)throw Error('Archive changed during copy');
+extractAll(join(out,'resources/app.asar'),join(out,'resources/app'));await rename(join(out,'resources/app.asar'),join(out,'resources/original-app.asar'));
+await saveJson(join(out,'YOINKR-PREPARATION.json'),{schema:1,source:root,version:pkg.version,originalAsarSha256,transformation:'Verify pinned archive before extraction. Extract app.asar unchanged to resources/app; preserve unpacked native assets and relative symlinks; retain archive as original-app.asar. Electron loads the loose app directory. No application is executed.'});console.log(out);

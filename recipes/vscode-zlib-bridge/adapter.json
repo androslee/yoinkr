@@ -1,0 +1,55 @@
+{
+  "schema": 1,
+  "kind": "feature-host-adapter",
+  "id": "vscode-zlib-bridge-linux-x64-v1",
+  "platform": "linux",
+  "arch": "x64",
+  "target": {
+    "name": "Code",
+    "version": "1.142.0",
+    "main": "./out/main.js",
+    "type": "module"
+  },
+  "files": [
+    {
+      "path": "resources/app/package.json",
+      "sha256": "3d65eb7100e75e28f6e34cb5a700ea413f903faea32734234dc4a0c4ad86f7ed"
+    },
+    {
+      "path": "resources/app/product.json",
+      "sha256": "3516f09f4cbf45b36593b52911d62946ad72510b88f00be9d8b9dbfb996b16be"
+    },
+    {
+      "path": "resources/app/out/main.js",
+      "sha256": "91759d1d64d23437dd6642630826b91824e887ddba196f4bad137b1073b3e36c"
+    },
+    {
+      "path": "resources/app/out/vs/workbench/workbench.desktop.main.js",
+      "sha256": "74de4ceb93610658c5eb15b64b228d085f25c9c95d6ec8b002f791df7be4614c"
+    },
+    {
+      "path": "resources/app/out/vs/base/parts/sandbox/electron-browser/preload.js",
+      "sha256": "ab7c187d1d4f30cc794ed693159f9c8e4252d9ae961e4d9dc947d37d621ee14e"
+    },
+    {
+      "path": "code",
+      "sha256": "f36c0ef83163bb3c7b99c5860ce98a5d4055dd6b69d3a4d393d7563e499d3456"
+    }
+  ],
+  "feature": {
+    "id": "zlib-crc32",
+    "digest": "1818f8eb83cbd61ec636cfff670fd5c4e2c3693414c04bb718ddb33041e72089"
+  },
+  "surface": "application-owned saved-file checksum window",
+  "commands": [
+    "open",
+    "checksum-saved-file",
+    "cancel"
+  ],
+  "capabilities": [
+    "file.savedPath",
+    "file.readBytes",
+    "bridge.crc32"
+  ],
+  "extensionsUsed": false
+}

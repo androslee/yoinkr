@@ -1,0 +1,57 @@
+{
+  "schema": 1,
+  "kind": "feature-host-adapter",
+  "id": "joplin-raw-diff-linux-x64-v1",
+  "platform": "linux",
+  "arch": "x64",
+  "target": {
+    "name": "@joplin/app-desktop",
+    "version": "3.7.21",
+    "main": "main.bundle.js",
+    "type": "commonjs"
+  },
+  "files": [
+    {
+      "path": "resources/app/package.json",
+      "sha256": "2caf6a44c578054124684c6ec441eff90e434c09319ea5dd74c69ac1109c1119"
+    },
+    {
+      "path": "resources/app/main.bundle.js",
+      "sha256": "4f7d939b2dba790933f0190fc9b3982ec7122170ed741b369190209a183c9a37"
+    },
+    {
+      "path": "resources/app/main-html.bundle.js",
+      "sha256": "7123656e59c7d2585d84176a793ab1f4b06c6db4c2981bd7c14d06104aa28a20"
+    },
+    {
+      "path": "resources/app/index.html",
+      "sha256": "a083a1d8a8065872fb74c381730e5b05958a041af717643e2eaeaec8557f6c81"
+    },
+    {
+      "path": "resources/app/bridge.js",
+      "sha256": "2c22624a55ae6cc1baebbcbe6c92b4ce8e8cc245cef154abf1873117f08fd51e"
+    },
+    {
+      "path": "joplin",
+      "sha256": "931b7ad5c703748f2bc045b2a997ae6bc5e54c7dae1d42916272761f3782ed49"
+    }
+  ],
+  "feature": {
+    "id": "mqtt-raw-diff",
+    "digest": "175458a5e1277738fea13466c274b316cc7d1c97ca60bb10dafb6437a07e1187"
+  },
+  "surface": "application-owned comparison tool window",
+  "commands": [
+    "open",
+    "capture-baseline",
+    "compare-selection",
+    "reset"
+  ],
+  "capabilities": [
+    "note.selection",
+    "theme",
+    "clipboard.writeText",
+    "feature.settings"
+  ],
+  "extensionsUsed": false
+}

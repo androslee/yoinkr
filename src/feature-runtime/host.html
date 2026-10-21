@@ -1,0 +1,7 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Recovered comparison — minimal host</title><style>body{margin:0;background:#151515;color:#eee;font-family:Arial}header{padding:12px}button{cursor:pointer}#feature{margin:12px}pre{user-select:text}</style><header>Yoinkr minimal host — original MQTT Explorer UI, explicit state adapters</header><main id="feature"></main><script type="module">
+import * as feature from './feature.js';
+window.featureModule=feature;
+window.copied=[];
+window.capabilities={clipboard:{writeText:async text=>{await navigator.clipboard.writeText(text);window.copied.push(text)}}};
+window.instance=feature.mount(document.querySelector('#feature'),{topic:'lab/status',messages:['{"status":"ready","n":1}','{"status":"running","n":2}'],mode:'diff',theme:'dark'},window.capabilities);
+</script></html>
