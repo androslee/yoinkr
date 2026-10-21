@@ -1,0 +1,59 @@
+{
+  "schema": 1,
+  "name": "Screenity drawing tools \u2192 Firefox recording studio",
+  "upstream": "https://github.com/alyssaxuu/screenity",
+  "commit": "c5b344fbb3d9a126c4b3a39f0979c7976392fa96",
+  "version": "4.7.0",
+  "license": "GPL-3.0",
+  "files": [
+    {
+      "path": "src/pages/Content/canvas/fabricCompat.js",
+      "sha256": "86852c2d3fb76ed383612cb1042bdedcf7f52861678891d7c6071eb94c25fcf0"
+    },
+    {
+      "path": "src/pages/Content/canvas/modules/PenTool.jsx",
+      "sha256": "ec213344e1d468d2d5a67aaac7419e2f0cdb347bc76503843eff81a88053ee79"
+    },
+    {
+      "path": "src/pages/Content/canvas/modules/ArrowTool.jsx",
+      "sha256": "6ce25b5f7467b538ba45e466f06d82afc89bc549fe80959ca0b0b06b8202fa75"
+    },
+    {
+      "path": "src/pages/Content/canvas/modules/ShapeTool.jsx",
+      "sha256": "0d1cbd458729a8c2618a8565a4f9bf61bce160dd26d06080369b03aeae413612"
+    },
+    {
+      "path": "src/pages/Content/canvas/modules/TextTool.jsx",
+      "sha256": "4977ab89547ef9a17e2577f50336390cd95b3a8cff5cd5646a2f77b53c4a592a"
+    },
+    {
+      "path": "src/pages/Content/canvas/modules/SelectTool.jsx",
+      "sha256": "763cccbfe5e7967d6c78faca2d4fdc97a3bfcc115c9b8f5c2d53e48120400e4f"
+    },
+    {
+      "path": "src/pages/Content/canvas/modules/History.jsx",
+      "sha256": "765c294a24f3e8d067ca1867ae2f6022b76c367b55c8fa71626332024c928842"
+    },
+    {
+      "path": "LICENSE",
+      "sha256": "f817886ee6bb65ed3098a7987b1e9781653d15c71f85589ce0d2af663c66d373"
+    },
+    {
+      "path": "THIRD_PARTY_NOTICES.md",
+      "sha256": "89b34d01926abd2f6773d729d08f9b4aa96a53ad7d612e6db1ca79f1cd185c96"
+    },
+    {
+      "path": "package.json",
+      "sha256": "4f03e1f3e16795d216b4f8c3f65e18dbc8d1bebefbd525cb62560c6e7715c055"
+    },
+    {
+      "path": "package-lock.json",
+      "sha256": "4fb87900603665ed64d6255d1e784557eba97b36b9c96d29895ac2c0d2445bde"
+    },
+    {
+      "path": "src/manifest.json",
+      "sha256": "ba44d0f654709c6a86eca2894abc9336a5cb588427b6780f6d488b80d25ce82c"
+    }
+  ],
+  "scope": "Unmodified original drawing modules and Fabric compatibility layer. New Firefox host, capture/composition/recording and launcher. Not the complete Screenity extension."
+}

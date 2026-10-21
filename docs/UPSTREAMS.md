@@ -33,3 +33,7 @@ New host/transport/UI code is Yoinkr code. mqtt@5.14.1 and other build dependenc
 ## v0.6 source-map decoder
 
 `@jridgewell/trace-mapping@0.3.31` is pinned as a direct runtime dependency for flat source-map decoding and generated-position lookup. Its original package LICENSE remains in node_modules. The report embeds derived mapping data and Yoinkr UI code; donor source and map-embedded originals remain attributed to their respective original files/cases.
+
+## Screenity → Firefox example
+
+Screenity 4.7.0, revision `c5b344fbb3d9a126c4b3a39f0979c7976392fa96`: https://github.com/alyssaxuu/screenity . The example acquires hash-pinned original drawing modules and licenses, bundles them with Fabric 6.9.1, and supplies a new Firefox host and capture backend. Original source files are retained unchanged in generated output. Screenity is GPLv3; full notices and corresponding recovered source accompany the local build. The public repository contains recovery/build instructions and original adapter code rather than downloaded donor code or Firefox binaries. This is a partial feature port, not the official Screenity extension. See [the example](../examples/screenity-firefox/README.md) for capabilities and test scope.

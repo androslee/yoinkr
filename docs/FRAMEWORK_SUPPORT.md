@@ -1,13 +1,14 @@
 # Desktop framework support and application catalog
 
-Reviewed **2026-10-20**, against Yoinkr **v0.28.0**. This page records delivered evidence separately from future investigation candidates. It is documentation, not automatic framework detection or a new integration capability.
+Reviewed **2026-10-20**, against Yoinkr **v0.29.0**. This page records delivered evidence separately from future investigation candidates. It is documentation, not automatic framework detection or a new integration capability.
 
 ## What we have actually verified
 
 | Family / route | Status | Delivered scope and evidence | Important limits |
 | --- | --- | --- | --- |
 | **Electron** | **Verified, scoped real applications** | MQTT Explorer donor code/UI recovered and integrated into actual VS Code; the complete Raw/Diff package also runs in Joplin. [Host integration](FEATURE_HOSTS.md), [shared acceptance](SHARED_FEATURE_VERIFICATION.md), [second host](SECOND_HOST.md), [version repair](ADAPTER_REPAIR.md). | Named versions and features on Linux x86-64 only. Other Electron apps, operating systems and arbitrary features require their own adapters and acceptance. |
-| **Chromium browser host** | **Limited demonstration** | Original VS Code preview CSS reused in a newly written, extension-free Chromium app-mode document viewer. [Showcase](SHOWCASE.md), [browser UI checks](UI_REPLAY.md). | Browser-host UI/asset reuse; no native Chromium C++ integration, built-in MIME support, or acceptance in Chrome, Edge, Brave, Vivaldi or Opera. |
+| **Chromium browser host** | **Limited demonstration** | Original VS Code preview CSS reused in a newly written, extension-free Chromium app-mode document viewer. [Showcase](../examples/README.md), [browser UI checks](UI_REPLAY.md). | Browser-host UI/asset reuse; no native Chromium C++ integration, built-in MIME support, or acceptance in Chrome, Edge, Brave, Vivaldi or Opera. |
+| **Firefox WebExtensions host** | **Verified, bounded source port** | Screenity 4.7.0 original drawing/history modules in Firefox 158.0 Linux x86-64; actual add-on installation, real isolated-screen capture, recording, permission handling and drift refusal. [Example](../examples/screenity-firefox/README.md). | Partial feature recovery with new Firefox host/capture code; not the full Screenity app, automatic CRX conversion, audio/camera, Windows/macOS or signed distribution. |
 | **Native Linux C ABI component** | **Verified component bridge** | Original compiled zlib 1.3 exercised through a bounded subprocess bridge, including a saved-file action in real VS Code. [Native component](NATIVE_COMPONENTS.md), [managed bridge](COMPONENT_BRIDGE.md). | A library/component route, not a desktop GUI framework. Does not establish Qt, GTK, Win32, .NET or JVM UI support. |
 
 The Electron evidence covers these particular roles and configurations:

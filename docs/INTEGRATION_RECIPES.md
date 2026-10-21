@@ -39,4 +39,4 @@ The deterministic verifier supports named, JSON-callable Node exports. It uses s
 
 Recipient copy limits are 10,000 regular files, 16 MiB/file, 256 MiB total. `node_modules`, `.git` and `.modkit` are excluded; dependencies are not installed automatically. Symlinks and special files are refused. Small ASAR recipients can be unpacked, but links/unpacked companions require a prepared directory. No in-place live-app patching or automatic overwrites occur.
 
-The larger native VS Code showcase has a dedicated, version-guarded builder, described in SHOWCASE.md, because cloning a desktop application runtime exceeds this small module-workspace limit.
+The larger native VS Code showcase has a dedicated, version-guarded builder, described in the examples index, because cloning a desktop application runtime exceeds this small module-workspace limit.

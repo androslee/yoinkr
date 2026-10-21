@@ -10,11 +10,11 @@ The project was renamed from Modkit to **Yoinkr** in version **0.28.0**.
 * Product, workbench, generated reports and new native menus: **Yoinkr**.
 * Environment settings: `YOINKR_HOME`, `YOINKR_PROFILE_SUFFIX` and other `YOINKR_*` names shown in the guides.
 * MCP client fragment: `mcpServers.yoinkr`; discover tools with the `yoinkr_` prefix.
-* Local project directory: `/home/drotek/deepseek_harness/yoinkr`.
+* Local project directory: your `yoinkr/` checkout.
 
 Run from a source checkout with the existing `node src/cli.js ...` and `npm run ...` commands. Installing the package through npm provides the `yoinkr` executable. This rename does not install a global npm command, publish a package/repository or edit any AI host configuration.
 
-The old local directory, `/home/drotek/deepseek_harness/modkit`, remains a symlink to `yoinkr`. It preserves open IDE tabs, existing launchers, source-map paths and recorded local input references. The directory is moved once; there are not two independent checkouts. Future documentation and generated client fragments use the canonical new path.
+When renaming an existing local checkout, an optional `modkit` → `yoinkr` directory symlink can preserve open IDE tabs and recorded input paths. Fresh clones do not need this alias. Generated client fragments use your current checkout path.
 
 ## Settings and agent clients
 

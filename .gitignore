@@ -27,3 +27,8 @@ findings/
 
 # Yoinkr standalone client fragment
 /yoinkr-client.json
+
+# Per-example browser copies, profiles, downloads and local development notes
+.local/
+.local-notes/
+web-ext-artifacts/

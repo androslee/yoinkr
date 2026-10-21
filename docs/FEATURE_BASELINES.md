@@ -125,4 +125,4 @@ An empty MQTT message removes the selected topic in this pinned application. The
 
 The dependency plan leaves state/decoder hooks, plotting cross-links, lazy imports, styling and runtime packages as recovery work. Known original React warnings are retained. A successful baseline neither declares a complete dependency closure nor proves that this UI already runs inside a recipient.
 
-Next is [milestone 18](PHASE_2_PLAN.md): build the runnable recovered package and make those dependencies explicit.
+Next is [milestone 18](../examples/README.md): build the runnable recovered package and make those dependencies explicit.

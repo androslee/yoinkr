@@ -1,0 +1,18 @@
+{
+  "name": "yoinkr-example-screenity-firefox",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "license": "GPL-3.0-only",
+  "scripts": {
+    "acquire": "node acquire.mjs",
+    "build": "node build.mjs",
+    "start": "node launch.mjs",
+    "verify": "node verify.mjs"
+  },
+  "dependencies": {
+    "fabric": "6.9.1",
+    "esbuild": "0.25.12",
+    "web-ext": "10.8.0"
+  }
+}

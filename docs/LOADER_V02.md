@@ -2,7 +2,7 @@
 
 A local, non-destructive renderer mod loader and early feature-portability workbench for Electron applications. The loader does not edit the target application's files. Mods run through the DevTools protocol and have the renderer's authority; they are not sandboxed plugins.
 
-The longer-term idea is a reusable feature with an adapter for each app and tests proving its behavior. Sharing Electron does not make two apps' internal APIs interchangeable. See [the review and expansion plan](ROADMAP.md) for implemented fixes, limitations and ordered milestones.
+The longer-term idea is a reusable feature with an adapter for each app and tests proving its behavior. Sharing Electron does not make two apps' internal APIs interchangeable. See [the review and expansion plan](../examples/README.md) for implemented fixes, limitations and ordered milestones.
 
 ## Requirements and quick start
 
@@ -51,4 +51,4 @@ PLAYWRIGHT_MODULE=/absolute/path/to/playwright/index.mjs npm run test:browser
 
 The default suite has 46 named unit regressions (Node also reports the helper module as a file test). The optional browser suite checks actual native WebSocket/CDP execution across current documents, reloads, independent/replacement windows and both focus-mode adapters. It launches only its own temporary Chromium profile. Runtime operation needs no Playwright, internet or AI tokens.
 
-No real application's live profile was modified during this review. See [verification](../evidence/VERIFICATION.json) and [scope/next steps](ROADMAP.md). Main-process behavior, automatic extraction, full donor/recipient differential testing, native ABI translation and non-Electron adapters remain future work.
+No real application's live profile was modified during this review. See [verification](../evidence/VERIFICATION.json) and [scope/next steps](../examples/README.md). Main-process behavior, automatic extraction, full donor/recipient differential testing, native ABI translation and non-Electron adapters remain future work.

@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Screenity tools · Yoinkr Firefox lab</title><link rel="stylesheet" href="studio.css"></head>
+<body>
+<header><div><span class="eyebrow">YOINKR / CHROMIUM → FIREFOX</span><h1>Record. Draw. Explain.</h1><p>Original Screenity drawing tools, in a local Firefox studio.</p></div><span class="badge">Experimental partial port</span></header>
+<main>
+<section class="panel controls" aria-label="Recording controls">
+<button id="share">Choose screen or window</button><button id="demo">Use animated demo</button>
+<button id="record" disabled>● Record</button><button id="pause" disabled>Pause</button><button id="stop" disabled>Stop</button><button id="disconnect" disabled>Release screen</button>
+<span id="status" role="status" aria-live="polite">Choose a source, or try the private animated demo.</span>
+</section>
+<section class="panel tools" aria-label="Drawing tools">
+<button data-tool="pen" aria-pressed="true">Pen</button><button data-tool="highlighter" aria-pressed="false">Highlighter</button><button data-tool="arrow" aria-pressed="false">Arrow</button><button data-tool="shape" aria-pressed="false">Rectangle</button><button data-tool="text" aria-pressed="false">Text</button><button data-tool="select" aria-pressed="false">Select</button>
+<label>Ink <input id="color" type="color" value="#ffcc33"></label><label>Size <input id="width" type="range" min="1" max="5" value="2"></label>
+<button id="undo">Undo</button><button id="redo">Redo</button><button id="clear">Clear</button><button id="snapshot">Save PNG</button>
+</section>
+<div id="viewport"><div id="stage"><canvas id="base" width="960" height="540"></canvas><div id="ink"><canvas id="drawing" width="960" height="540"></canvas></div></div></div>
+<section class="panel"><h2>Your recording</h2><video id="playback" controls hidden></video><a id="download" hidden download="screenity-firefox.webm">Save recording (.webm)</a><p id="details">Nothing is uploaded. Screen sharing requires Firefox's permission each time. Audio, webcam, Screenity's editor and cloud services are not included.</p></section>
+<details class="panel"><summary>What was transferred?</summary><p>Screenity 4.7.0: original PenTool, ArrowTool, ShapeTool, TextTool, SelectTool, History, and Fabric compatibility layer. Yoinkr supplies this interface and the Firefox capture/recording backend. This is an independent lab example, not an official Screenity release.</p><p>GPLv3; full original files and notices are retained beside this generated extension in <code>source/</code>. Captures remain in memory until you save them. Closing this tab discards unsaved work.</p></details>
+</main><video id="capture" muted playsinline hidden></video><script src="studio.bundle.js"></script></body></html>

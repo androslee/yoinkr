@@ -27,7 +27,7 @@ The reference inputs are:
 * Element Web `6b97ebf1ad502d2f82f9a95a85c7c011177d4060` — HtmlUtils and the original AGPL license.
 * GNOME GIMP `5a569ea4df7c29416f34bd109b66c8bdb5482292` — paint core, paint options and COPYING.
 
-All original bytes and licenses are retained in generated packages, along with source ranges, original-slice hashes, compiler output and new adapters. Public recipes contain pins, not recovered code. Generated outputs contain donor code and are private build artifacts. Their licensing is not replaced by Yoinkr's MIT package metadata. When redistributing a derived example, retain the full applicable license and corresponding source for the exact output. The OBS source builder copies its entire recovered donor package into `donor/` for this purpose.
+All original bytes and licenses are retained in generated packages, along with source ranges, original-slice hashes, compiler output and new adapters. Public recipes contain pins, not recovered code. Generated outputs contain donor code and are private build artifacts. Their licensing is not replaced by Yoinkr's GPLv3 license. When redistributing a derived example, retain the full applicable license and corresponding source for the exact output. The OBS source builder copies its entire recovered donor package into `donor/` for this purpose.
 
 ## Build and launch the Element example
 
