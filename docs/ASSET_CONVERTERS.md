@@ -31,10 +31,10 @@ Planning performs validation and conversion in memory without creating output or
 To reproduce the delivered example in a new directory:
 
 ```sh
-node scripts/build-converter-showcase.mjs --out ./builds/my-asset-conversion
+node scripts/applications/build-converter-showcase.mjs --out ./builds/my-asset-conversion
 # Optional: --source /path/to/extracted/Code/resources/app
 PLAYWRIGHT_MODULE=/path/to/playwright/index.mjs \
-  node scripts/converter-smoke.mjs ./builds/my-asset-conversion
+  node scripts/applications/converter-smoke.mjs ./builds/my-asset-conversion
 ```
 
 ## Recipe

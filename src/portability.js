@@ -9,7 +9,7 @@ import {exportDeliveryBundle,importDeliveryBundle,inspectDeliveryBundle} from '.
 import {newDestination,saveJson,sha256} from './workspace.js';
 import {YOINKR_VERSION} from './version.js';
 const project=fileURLToPath(new URL('..',import.meta.url));
-const method=['src/portability.js','scripts/verify-portability.mjs','test/delivery.test.js','package.json','package-lock.json'];
+const method=['src/portability.js','scripts/general/verify-portability.mjs','test/delivery.test.js','package.json','package-lock.json'];
 export function portabilityScope(){return {platform:process.platform,arch:process.arch,node:process.versions.node,nativeRecipientAcceptance:'not-run',milestone24Complete:false,limitation:'Core recipe/CLI/MCP/workbench portability checks do not validate native Windows application integration.'};}
 async function testDelivery(root){
  const file=join(root,'DELIVERY-TESTS.log'),log=createWriteStream(file,{flags:'wx',mode:0o600});await once(log,'open');

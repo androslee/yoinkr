@@ -27,7 +27,7 @@ Supply a clean checkout of the pinned official MQTT Explorer revision and local 
 From Yoinkr:
 
 ```sh
-node scripts/build-mqtt-donor.mjs \
+node scripts/applications/build-mqtt-donor.mjs \
   --source /path/to/pinned/MQTT-Explorer \
   --out /path/to/new-donor-build
 ```
@@ -39,7 +39,7 @@ npm can rewrite sibling lockfiles during installation. The builder snapshots the
 To repeat the build with exact retained npm locks and an already acquired runtime:
 
 ```sh
-node scripts/build-mqtt-donor.mjs \
+node scripts/applications/build-mqtt-donor.mjs \
   --source /path/to/pinned/MQTT-Explorer \
   --locks /path/to/previous-donor-build \
   --offline \
@@ -51,7 +51,7 @@ This uses `npm ci --offline`, copies the verified Electron runtime from the prio
 ## Prepare matching REA Evidence
 
 ```sh
-node scripts/prepare-mqtt-feature.mjs \
+node scripts/applications/prepare-mqtt-feature.mjs \
   --source /path/to/pinned/MQTT-Explorer \
   --code /path/to/VS-Code \
   --out /path/to/new-feature-case
@@ -65,7 +65,7 @@ The recipe is [recipes/mqtt-payload-baseline/recipe.json](../recipes/mqtt-payloa
 
 ```sh
 PLAYWRIGHT_MODULE=/path/to/playwright/index.mjs \
-node scripts/capture-mqtt-baseline.mjs \
+node scripts/applications/capture-mqtt-baseline.mjs \
   --donor /path/to/original-donor-build \
   --case /path/to/feature-case \
   --code /path/to/VS-Code \

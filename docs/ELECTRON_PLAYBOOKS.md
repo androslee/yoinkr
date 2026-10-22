@@ -38,7 +38,7 @@ node src/cli.js electron-rollback /path/to/new-workspace
 To build another copy of the delivered demonstration:
 
 ```sh
-node scripts/build-electron-playbook.mjs \
+node scripts/applications/build-electron-playbook.mjs \
   --source ./builds/native-plot-v0.13/code --out ./builds/my-playbook-lab
 ```
 

@@ -7,5 +7,5 @@ test('portability receipts report the actual platform and never promote native s
  const value=portabilityScope();assert.equal(value.platform,process.platform);assert.equal(value.arch,process.arch);assert.equal(value.nativeRecipientAcceptance,'not-run');assert.equal(value.milestone24Complete,false);
 });
 test('CLI refuses a supplied/faked platform instead of producing a Windows receipt',()=>{
- const result=spawnSync(process.execPath,[fileURLToPath(new URL('../scripts/verify-portability.mjs',import.meta.url)),'--platform','win32','--out','unused'],{encoding:'utf8'});assert.notEqual(result.status,0);assert.match(result.stderr,/platform is measured/);
+ const result=spawnSync(process.execPath,[fileURLToPath(new URL('../scripts/general/verify-portability.mjs',import.meta.url)),'--platform','win32','--out','unused'],{encoding:'utf8'});assert.notEqual(result.status,0);assert.match(result.stderr,/platform is measured/);
 });

@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {writeFile,readFile,mkdir,symlink,rm} from 'node:fs/promises';
 import {join} from 'node:path';
-import {libraryFixture} from '../scripts/fixtures/library.mjs';
+import {libraryFixture} from '../scripts/general/fixtures/library.mjs';
 import {createAgent,loadAgentConfig,RESULT_PAGE} from '../src/agent.js';
 import {writeMcpClientConfig} from '../src/agent-mcp.js';
 async function fixture(extra={}){

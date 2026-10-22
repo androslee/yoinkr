@@ -95,6 +95,6 @@ Local outputs:
 - `reports/adapter-repair-v0.25.html`: offline dark report.
 - `evidence/v0.25/VERIFICATION.json`: release checks, hashes and promotion record.
 
-Use `scripts/seal-second-host.mjs <completed-proof>` to append indexes to assessment/shared/native proof directories. `npm run report:adapter-repair --` accepts `--root`, `--adapter`, `--original`, `--donor-run`, `--out`; it verifies indexes, source preconditions, exact candidate patch, both donor comparisons and native outcomes before creating new HTML. Reports embed screenshots and preserve unresolved evidence. Hashes detect later changes; they are not signatures.
+Use `scripts/applications/seal-second-host.mjs <completed-proof>` to append indexes to assessment/shared/native proof directories. `npm run report:adapter-repair --` accepts `--root`, `--adapter`, `--original`, `--donor-run`, `--out`; it verifies indexes, source preconditions, exact candidate patch, both donor comparisons and native outcomes before creating new HTML. Reports embed screenshots and preserve unresolved evidence. Hashes detect later changes; they are not signatures.
 
 The project remains standalone. No DSH, model tokens or agent-host configuration is required. Original binaries, application profiles and private build outputs remain excluded from the npm package. Portable fresh-checkout delivery and the guided UI/MCP journey remain milestone 24; GitHub publication is a separate explicit action.

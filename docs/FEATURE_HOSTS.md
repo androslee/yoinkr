@@ -87,7 +87,7 @@ Rollback preflights every tracked file and backup. Modified output blocks rollba
 
 ```sh
 PLAYWRIGHT_MODULE=/path/to/playwright/index.mjs \
-  node scripts/test-vscode-adapter.mjs \
+  node scripts/applications/test-vscode-adapter.mjs \
   --adapter ./new-recipient-lab --out ./native-acceptance --xvfb /path/to/Xvfb
 ```
 

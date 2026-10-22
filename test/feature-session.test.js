@@ -1,6 +1,6 @@
 import test from 'node:test';import assert from 'node:assert/strict';
 import {mkdtemp,mkdir,readFile,writeFile,rm} from 'node:fs/promises';import {join} from 'node:path';import {tmpdir} from 'node:os';
-import {libraryFixture} from '../scripts/fixtures/library.mjs';
+import {libraryFixture} from '../scripts/general/fixtures/library.mjs';
 import {validateFeatureRecipe,prepareFeatureSession,inspectFeatureSession,replayFeatureSession,probeFeatureRecipient} from '../src/feature-session.js';
 import {verifyFeatureDonor} from '../src/feature-electron.js';import {createFeatureReport} from '../src/feature-report.js';import {sha256} from '../src/workspace.js';
 async function fixture(t){const f=await libraryFixture();t.after(()=>rm(f.root,{recursive:true,force:true}));const dir=join(f.root,'recipes');await mkdir(dir);const source='export const original=true;',compiled='original compiled app';await writeFile(join(f.donor,'source.js'),source);await writeFile(join(f.donor,'app.js'),compiled);await writeFile(join(f.donor,'runtime'),'owned runtime');

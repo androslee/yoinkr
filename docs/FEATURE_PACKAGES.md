@@ -27,7 +27,7 @@ node src/cli.js feature-package recipes/mqtt-raw-diff/recipe.json \
   --input-root /path/to/original-donor-build \
   --source /path/to/clean-donor-checkout --route source --out ./source-package
 
-node scripts/analyze-feature-bundles.mjs \
+node scripts/general/analyze-feature-bundles.mjs \
   --donor /path/to/original-donor-build --out ./bundle-analysis
 
 node src/cli.js feature-package recipes/mqtt-raw-diff/recipe.json \
@@ -73,13 +73,13 @@ instance.dispose();
 ## Reproduction and retained proof
 
 ```sh
-node scripts/verify-feature-recovery.mjs \
+node scripts/general/verify-feature-recovery.mjs \
   --source /path/to/clean-donor-checkout \
   --donor /path/to/original-donor-build \
   --evidence ./bundle-analysis/REA.json --out ./recovery-proof
 
 PLAYWRIGHT_MODULE=/path/to/playwright/index.mjs \
-  node scripts/test-feature-package.mjs \
+  node scripts/general/test-feature-package.mjs \
   --package ./recovery-proof/source-1 --out ./source-browser-proof
 # Repeat for bundle-1 with a new output directory.
 npm test

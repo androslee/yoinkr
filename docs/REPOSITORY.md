@@ -8,10 +8,13 @@ The repository contains code and reproducible instructions useful to another dev
 | `examples/` | Discoverable donor/recipient examples with setup, attribution, curated synthetic previews and verification boundaries |
 | `recipes/` | Input fingerprints, adaptation rules, acceptance suites and portable recipe bundles |
 | `addons/` | Supporting host implementations and original fixture UI |
-| `scripts/` | Repeatable build, inspection, benchmark and verification tools |
+| `scripts/general/` | Reusable build, analysis, packaging, portability and core verification tools |
+| `scripts/applications/` | Application-specific example builders, launchers, benchmarks and acceptance checks |
 | `test/` | Regression tests and small synthetic fixtures |
 | `mods/` | Small original loader examples |
 | `docs/` | User/developer guides, support matrix and provenance |
+
+See [script layout and commands](../scripts/README.md) for the boundary between reusable tools and application demonstrations.
 
 ## What stays local
 

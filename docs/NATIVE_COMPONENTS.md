@@ -21,12 +21,12 @@ The supplied component/version is zlib 1.3 on this Linux x86-64 machine. The act
 
 ## Explicit provider setup
 
-The installed REA ELF provider requires a caller-supplied Python environment containing pwntools 4.15.0, pyelftools 0.33 and Unicorn 2.1.2. A project-only environment is already prepared at `.tools/rea-elf` for this delivery. The complete package lock is `scripts/requirements-rea-elf.txt`.
+The installed REA ELF provider requires a caller-supplied Python environment containing pwntools 4.15.0, pyelftools 0.33 and Unicorn 2.1.2. A project-only environment is already prepared at `.tools/rea-elf` for this delivery. The complete package lock is `scripts/general/requirements-rea-elf.txt`.
 
 To reproduce it explicitly, with `uv` available:
 
 ```sh
-./scripts/setup-rea-elf.sh
+./scripts/general/setup-rea-elf.sh
 ```
 
 Setup may download packages. Native preparation/verification commands never install packages, alter system Python, register agents or change DSH. REA receives the selected interpreter through a per-subprocess `REA_PWNTOOLS_PYTHON` setting. The `ctypes` host itself uses only Python's standard library with isolated Python mode and a minimal environment.
@@ -59,9 +59,9 @@ node src/cli.js native-checksum /path/to/new-workspace \
 To reproduce the example in a fresh directory:
 
 ```sh
-node scripts/build-native-component.mjs --out ./builds/my-native-component \
+node scripts/applications/build-native-component.mjs --out ./builds/my-native-component \
   --python "$YOINKR_PROVIDER_PYTHON"
-node scripts/native-component-smoke.mjs ./builds/my-native-component
+node scripts/applications/native-component-smoke.mjs ./builds/my-native-component
 ```
 
 ## Recipe and ABI contract

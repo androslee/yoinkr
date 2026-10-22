@@ -97,7 +97,7 @@ npm run test:joplin-rollback -- \
 
 The rollback test starts the fully restored original application via native CDP with Joplin's built-in `--running-tests` flag, which skips cross-instance IPC. No adapter or inspector patch remains in that runtime. It creates/edits a real note and retains a screenshot. This testing flag is separate from the normal adapted lab launcher.
 
-After completed tests, run `node scripts/seal-second-host.mjs /path/to/new-proof` and likewise for the rollback adapter's `rollback-proof` subdirectory. This appends an integrity index without replacing earlier evidence; transient session/profile directories are excluded. Driver observations and source snapshots remain indexed.
+After completed tests, run `node scripts/applications/seal-second-host.mjs /path/to/new-proof` and likewise for the rollback adapter's `rollback-proof` subdirectory. This appends an integrity index without replacing earlier evidence; transient session/profile directories are excluded. Driver observations and source snapshots remain indexed.
 
 `npm run report:second-host --` accepts `--proof`, `--joplin`, `--vscode`, `--rollback`, `--repeat`, `--launcher`, `--donor-run` and `--out` explicit paths. It verifies artifact indexes, complete package digests, both donor comparisons, lifecycle gates and rollback before writing a new offline dark HTML report. `--repeat` selects a repeat-preparation adapter made by the build script. `--launcher` selects a sealed public-launcher proof produced by `npm run test:joplin-launcher -- <adapter> <Xvfb> <new proof>`. It displays outcomes separately, rather than treating launch success as feature equivalence.
 

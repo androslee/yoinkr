@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {mkdtemp, mkdir, readFile, writeFile, symlink, rm} from 'node:fs/promises';
 import {join} from 'node:path';
 import {tmpdir} from 'node:os';
-import {verificationOutput} from '../scripts/verification-output.mjs';
+import {verificationOutput} from '../scripts/general/verification-output.mjs';
 
 async function project(t) {
   const root = await mkdtemp(join(tmpdir(), 'yoinkr-output-test-'));
