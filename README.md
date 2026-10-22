@@ -80,3 +80,10 @@ The regression suite uses temporary fixtures. Native and browser checks need the
 ## License and attribution
 
 Yoinkr is licensed under [GNU GPLv3](LICENSE). Third-party software and recovered features retain their own licenses, notices and redistribution requirements. Public examples contain acquisition recipes and host code; they do not grant new rights to donor applications. [Upstream provenance](docs/UPSTREAMS.md).
+
+
+## ANDRos note
+
+thanks for taking a look.  my inspiration for this was the deepseek harness with its cordis plugin system.  where you could just about add anything to it.  infintely modable.  and the universal modder (rehan-remade/universal-modder) for video games.  after looking into it and realizing "other things" likely had the same attack vector/exploit possibility that was used there (common applications built on the same engines/frameworks), i thought that idea should be able to transfer to something broader.  why not desktop applications too.  can we take features from application FOO and easily transfer them exactly into the 2nd application BAR because they are built on the same framework BAZ.
+
+and yes, i think so.
