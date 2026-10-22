@@ -1,3 +1,5 @@
+import {verificationOutput} from './verification-output.mjs';
+const verificationDirectory = await verificationOutput('mqtt');
 import assert from 'node:assert/strict';import{createServer}from'node:net';import{createRequire}from'node:module';import{mkdir,writeFile,readFile}from'node:fs/promises';import{resolve,join}from'node:path';import aedes from'aedes';import mqtt from'mqtt';
 const require=createRequire(import.meta.url),build=resolve((process.env.YOINKR_EXAMPLES??process.env.MODKIT_EXAMPLES)??'builds/feature-examples-v0.4');const {Explorer}=require(join(build,'mqtt-vscode/controller.cjs'));
 const broker=aedes(),server=createServer(broker.handle);await new Promise(r=>server.listen(0,'127.0.0.1',r));const port=server.address().port;const publisher=mqtt.connect('mqtt://127.0.0.1:'+port,{reconnectPeriod:0});const explorer=new Explorer();const checks=[];
@@ -12,5 +14,5 @@ try{
  await assert.rejects(explorer.publish({topic:'bad/#',payload:'x'}),/concrete/);explorer.receive('large',Buffer.alloc(262145));assert.equal(explorer.topics.has('large'),false);checks.push('Invalid publish topics and oversized messages are rejected');
  await Promise.all([explorer.connect({url:'mqtt://127.0.0.1:'+port}),explorer.connect({url:'mqtt://127.0.0.1:'+port})]);await until(()=>explorer.state==='Connected');await until(()=>Object.keys(broker.clients).length===2);checks.push('Rapid concurrent connection requests leave only one explorer client');
  await explorer.disconnect();assert.equal(explorer.client,null);await explorer.connect({url:'mqtt://127.0.0.1:'+port,filter:'home/#'});await until(()=>explorer.state==='Connected');explorer.clear();assert.equal(explorer.topics.size,0);checks.push('Disconnect, reconnect, and clear release old state');
- await mkdir('evidence',{recursive:true});await writeFile('evidence/mqtt-example.json',JSON.stringify({checks,broker:'Owned loopback-only Aedes MQTT broker',externalBrokerContacted:false},null,2)+'\n');console.log('MQTT EXAMPLE CHECKS PASSED:',checks.length);
+ await writeFile(verificationDirectory + '/mqtt-example.json',JSON.stringify({checks,broker:'Owned loopback-only Aedes MQTT broker',externalBrokerContacted:false},null,2)+'\n');console.log('MQTT EXAMPLE CHECKS PASSED:',checks.length);
 }finally{await explorer.dispose();await new Promise(r=>publisher.end(true,{},r));await new Promise(r=>server.close(r));await new Promise(r=>broker.close(r));}

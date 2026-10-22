@@ -1,9 +1,10 @@
+import {verificationOutput} from './verification-output.mjs';
 // Real retained MQTT Explorer Evidence, actual REA follow-up, real browser UI.
 import assert from 'node:assert/strict';import {mkdir,readFile,writeFile,copyFile,cp} from 'node:fs/promises';
-import {resolve,join} from 'node:path';import {fileURLToPath,pathToFileURL} from 'node:url';import {randomUUID} from 'node:crypto';
+import {resolve,join} from 'node:path';import {fileURLToPath,pathToFileURL} from 'node:url';
 import {createCaseReport,followupTrace,readCase,searchNotes} from '../src/investigation.js';
 const project=resolve(fileURLToPath(new URL('..',import.meta.url))),source=resolve((process.env.YOINKR_CASE??process.env.MODKIT_CASE)??join(project,'builds/feature-examples-v0.4/mqtt-case'));
-const out=resolve((process.env.YOINKR_INVESTIGATION_EVIDENCE??process.env.MODKIT_INVESTIGATION_EVIDENCE)??join(project,'evidence','investigation-'+randomUUID())),casePath=join(out,'case');await mkdir(out,{recursive:true});await mkdir(casePath);await mkdir(join(casePath,'evidence'));
+const out=await verificationOutput('investigation', process.env.YOINKR_INVESTIGATION_EVIDENCE??process.env.MODKIT_INVESTIGATION_EVIDENCE),casePath=join(out,'case');await mkdir(out,{recursive:true});await mkdir(casePath);await mkdir(join(casePath,'evidence'));
 for(const name of ['case.json','FIELD-NOTE.md'])await copyFile(join(source,name),join(casePath,name));
 for(const name of ['donor.json','recipient.json','trace.json'])await copyFile(join(source,'evidence',name),join(casePath,'evidence',name));
 const checks=[],before=await readFile(join(casePath,'case.json'),'utf8'),original=await readCase(casePath);

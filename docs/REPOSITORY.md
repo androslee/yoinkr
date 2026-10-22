@@ -19,7 +19,13 @@ The repository contains code and reproducible instructions useful to another dev
 
 Development milestone checklists and the original workstation-only showcase have been removed from the tracked tree. Their useful setup instructions are represented by the example guides and product documentation. Local originals remain in `.local-notes/` for development reference; that archive is not published or packaged.
 
-Some technical guides refer to historical evidence filenames to explain earlier testing scope. Those are references to local development results, not files promised in the checkout. Each maintained example must provide repeatable commands and clearly state its verification limits.
+### Verification output layout
+
+Use stable feature names, never release-number directories. Root smoke scripts write their latest results to `.local/verification/<suite>/` (for example `browser/`, `mqtt/` and `agent/`). A rerun replaces only that suite's marked, generated default directory. An unmarked directory or symlink is refused; explicit environment-variable output overrides are never cleared by the helper. Do not run the same suite concurrently against its default destination; give concurrent runs explicit separate destinations. A failed run can leave partial results, so check the command's exit status and report contents.
+
+Maintained examples keep their own stable `examples/<example>/.local/verification/` directory. Keep package versions and timestamps inside reports; Git records source history. Do not create `evidence/vX.Y/`, `builds/<feature>-vX.Y/` or a release-named folder each time a feature changes. New build scripts should use `examples/<example>/.local/build/` or a stable `.local/builds/<feature>/` destination. Legacy scripts that consume older prepared builds require their documented inputs; those historical build paths are not a convention for new work.
+
+The original workstation's accumulated verification history has been consolidated into one ignored `.local/archives/verification-history.tar.gz` archive. It is private development material and is excluded from Git and npm. Historical paths mentioned in older technical guides describe archive members, not files supplied with a checkout or instructions to recreate release-number folders. Sealed historical receipts are preserved unchanged; their absolute workstation paths may no longer resolve. Use each example's current reproduction commands for fresh verification.
 
 ## Before sharing changes
 

@@ -1,3 +1,5 @@
+import {verificationOutput} from './verification-output.mjs';
+const verificationDirectory = await verificationOutput('browser');
 // Opt-in real Chromium CDP integration. No installed user applications launched.
 import assert from 'node:assert/strict';
 import {spawn} from 'node:child_process';
@@ -27,7 +29,7 @@ try{
  await cdp.evaluate("document.body.insertAdjacentHTML('beforeend','<aside class=\"navigation\">Dynamic panel</aside>')",two);await until(()=>cdp.evaluate("[...document.querySelectorAll('.navigation')].every(n=>getComputedStyle(n).display==='none')",two));checks.push('Dynamic app panels follow active focus mode');
  await cdp.evaluate('window.__modkitFocus.dispose()',two);assert.equal(await cdp.evaluate("document.querySelectorAll('[data-yoinkr-focus-hidden]').length",two),0);checks.push('Dispose restores chrome and removes the feature');
  await cdp.call('Target.closeTarget',{targetId:first.targetId});await until(()=>!controller.sessions.has(first.targetId));const third=await cdp.call('Target.createTarget',{url:fixture('a')});await until(()=>controller.sessions.has(third.targetId));await until(()=>cdp.evaluate('!!window.__modkitFocus',controller.sessions.get(third.targetId)));checks.push('Replacement window receives the mod');
- assert.deepEqual(errors,[]);await mkdir('evidence',{recursive:true});await writeFile('evidence/browser.json',JSON.stringify({engine:'Real headless Chromium via native WebSocket and CDP',checks,errors,limits:'Fixture apps, not a commercial Electron app transplant; no main-process injection tested.'},null,2)+'\n');console.log('BROWSER CHECKS PASSED:',checks.length);
+ assert.deepEqual(errors,[]);await writeFile(verificationDirectory + '/browser.json',JSON.stringify({engine:'Real headless Chromium via native WebSocket and CDP',checks,errors,limits:'Fixture apps, not a commercial Electron app transplant; no main-process injection tested.'},null,2)+'\n');console.log('BROWSER CHECKS PASSED:',checks.length);
 }finally{
  cdp?.close();await controller?.stop();child.kill('SIGTERM');await exit;await rm(profile,{recursive:true,force:true,maxRetries:10,retryDelay:100});
 }

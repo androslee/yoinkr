@@ -51,4 +51,4 @@ PLAYWRIGHT_MODULE=/absolute/path/to/playwright/index.mjs npm run test:browser
 
 The default suite has 46 named unit regressions (Node also reports the helper module as a file test). The optional browser suite checks actual native WebSocket/CDP execution across current documents, reloads, independent/replacement windows and both focus-mode adapters. It launches only its own temporary Chromium profile. Runtime operation needs no Playwright, internet or AI tokens.
 
-No real application's live profile was modified during this review. See [verification](../evidence/VERIFICATION.json) and [scope/next steps](../examples/README.md). Main-process behavior, automatic extraction, full donor/recipient differential testing, native ABI translation and non-Electron adapters remain future work.
+No real application's live profile was modified during this review. See the historical verification record (see [local output policy](REPOSITORY.md#verification-output-layout)) and [scope/next steps](../examples/README.md). Main-process behavior, automatic extraction, full donor/recipient differential testing, native ABI translation and non-Electron adapters remain future work.

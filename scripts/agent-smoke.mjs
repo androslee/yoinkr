@@ -1,3 +1,4 @@
+import {verificationOutput} from './verification-output.mjs';
 // Real stdio MCP + pinned REA + original, owned fixture code. No model/API key or host config.
 import assert from 'node:assert/strict';
 import {Client} from '@modelcontextprotocol/client';
@@ -7,8 +8,8 @@ import {join,resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {sha256} from '../src/workspace.js';
 import {writeMcpClientConfig} from '../src/agent-mcp.js';
-const root=resolve((process.env.YOINKR_AGENT_EVIDENCE??process.env.MODKIT_AGENT_EVIDENCE)??'evidence/agent-smoke-'+Date.now());
-await mkdir(root,{mode:0o700});
+const root=await verificationOutput('agent', process.env.YOINKR_AGENT_EVIDENCE??process.env.MODKIT_AGENT_EVIDENCE);
+await mkdir(root,{recursive:true,mode:0o700});
 const donor=join(root,'donor'),recipient=join(root,'recipient');await mkdir(donor);await mkdir(recipient);
 const sources={
  'package.json':'{"name":"owned-agent-donor","version":"1.0.0","type":"module","main":"format.js"}',

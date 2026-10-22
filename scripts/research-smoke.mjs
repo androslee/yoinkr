@@ -1,3 +1,4 @@
+import {verificationOutput} from './verification-output.mjs';
 // Real upstream REA, original donor/recipient fixtures, actual code/asset transfer.
 import assert from 'node:assert/strict';
 import {mkdtemp,mkdir,writeFile,readFile,cp,rm} from 'node:fs/promises';
@@ -30,6 +31,6 @@ try{
  const archiveCase=await investigate({donor:archive,recipient,feature:'Archived progress formatter',seed:'format.js',out:join(root,'archive-case'),route:'direct'});
  assert.equal(archiveCase.status,'investigated');const archived=await exportFeature(join(root,'archive-case'),{traced:true,files:['assets/progress.svg']});for(const f of archived.files)assert.equal(await readFile(join(archived.directory,'files',f.path),'utf8'),sources[f.path]);checks.push('Actual REA analyzed a real ASAR archive and Yoinkr extracted its traced code and selected asset');
  await writeFile(join(donor,'format.js'),'changed');await assert.rejects(exportFeature(join(root,'case'),{traced:true}),/changed since/);checks.push('Changed donor code is refused against its recorded analysis hash');
- const output=resolve((process.env.YOINKR_EVIDENCE??process.env.MODKIT_EVIDENCE)??'evidence');await mkdir(output,{recursive:true});await cp(join(root,'case'),join(output,'research-case'),{recursive:true});await cp(join(root,'archive-case'),join(output,'research-archive-case'),{recursive:true});await cp(join(root,'workspace'),join(output,'integration-workspace'),{recursive:true});
+ const output=await verificationOutput('research', process.env.YOINKR_EVIDENCE??process.env.MODKIT_EVIDENCE);await mkdir(output,{recursive:true});await cp(join(root,'case'),join(output,'research-case'),{recursive:true});await cp(join(root,'archive-case'),join(output,'research-archive-case'),{recursive:true});await cp(join(root,'workspace'),join(output,'integration-workspace'),{recursive:true});
  await writeFile(join(output,'research-smoke.json'),JSON.stringify({provider:record.provider,checks,results,limits:'Original temporary JS fixtures; no live Electron app modified, no native or cross-engine conversion claimed.'},null,2)+'\n');console.log('REA RESEARCH CHECKS PASSED:',checks.length);
 }finally{await rm(root,{recursive:true,force:true});}

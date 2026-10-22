@@ -1,12 +1,13 @@
+import {verificationOutput} from './verification-output.mjs';
 import assert from 'node:assert/strict';
 import {mkdir,readFile,writeFile,readdir} from 'node:fs/promises';
 import {join,resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
-import {randomUUID,createHash} from 'node:crypto';
+import {createHash} from 'node:crypto';
 import {startWorkbench} from '../src/workbench.js';
 const project=fileURLToPath(new URL('..',import.meta.url));
 const prior=JSON.parse(await readFile((process.env.YOINKR_CASE??process.env.MODKIT_CASE)??join(project,'builds/feature-examples-v0.4/mqtt-case/case.json'),'utf8'));
-const out=resolve((process.env.YOINKR_WIZARD_EVIDENCE??process.env.MODKIT_WIZARD_EVIDENCE)??join(project,'evidence','wizard-'+randomUUID()));await mkdir(out,{recursive:true});
+const out=await verificationOutput('wizard', process.env.YOINKR_WIZARD_EVIDENCE??process.env.MODKIT_WIZARD_EVIDENCE);await mkdir(out,{recursive:true});
 const donor=prior.donor.path,recipient=prior.recipient.path,source='backend/src/Model/TreeNodeFactory.ts';
 const original=await readFile(join(donor,source));const sha=b=>createHash('sha256').update(b).digest('hex');
 const app=await startWorkbench({cases:[],applications:[donor,recipient],port:0,caseRoot:join(out,'cases'),reportRoot:join(out,'reports')});
