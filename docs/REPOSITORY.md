@@ -5,7 +5,7 @@ The repository contains code and reproducible instructions useful to another dev
 | Path | Purpose |
 | --- | --- |
 | `src/` | CLI, workbench, analysis integration, transfer engines and host adapters |
-| `examples/` | Discoverable donor/recipient examples with setup, attribution and verification boundaries |
+| `examples/` | Discoverable donor/recipient examples with setup, attribution, curated synthetic previews and verification boundaries |
 | `recipes/` | Input fingerprints, adaptation rules, acceptance suites and portable recipe bundles |
 | `addons/` | Supporting host implementations and original fixture UI |
 | `scripts/` | Repeatable build, inspection, benchmark and verification tools |

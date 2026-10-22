@@ -1,6 +1,6 @@
 # Desktop framework support and application catalog
 
-Reviewed **2026-10-20**, against Yoinkr **v0.29.0**. This page records delivered evidence separately from future investigation candidates. It is documentation, not automatic framework detection or a new integration capability.
+Reviewed **2026-10-21**, against Yoinkr **v0.30.0**. This page records delivered evidence separately from future investigation candidates. It is documentation, not automatic framework detection or a new integration capability.
 
 ## What we have actually verified
 
@@ -9,6 +9,7 @@ Reviewed **2026-10-20**, against Yoinkr **v0.29.0**. This page records delivered
 | **Electron** | **Verified, scoped real applications** | MQTT Explorer donor code/UI recovered and integrated into actual VS Code; the complete Raw/Diff package also runs in Joplin. [Host integration](FEATURE_HOSTS.md), [shared acceptance](SHARED_FEATURE_VERIFICATION.md), [second host](SECOND_HOST.md), [version repair](ADAPTER_REPAIR.md). | Named versions and features on Linux x86-64 only. Other Electron apps, operating systems and arbitrary features require their own adapters and acceptance. |
 | **Chromium browser host** | **Limited demonstration** | Original VS Code preview CSS reused in a newly written, extension-free Chromium app-mode document viewer. [Showcase](../examples/README.md), [browser UI checks](UI_REPLAY.md). | Browser-host UI/asset reuse; no native Chromium C++ integration, built-in MIME support, or acceptance in Chrome, Edge, Brave, Vivaldi or Opera. |
 | **Firefox WebExtensions host** | **Verified, bounded source port** | Screenity 4.7.0 original drawing/history modules in Firefox 158.0 Linux x86-64; actual add-on installation, real isolated-screen capture, recording, permission handling and drift refusal. [Example](../examples/screenity-firefox/README.md). | Partial feature recovery with new Firefox host/capture code; not the full Screenity app, automatic CRX conversion, audio/camera, Windows/macOS or signed distribution. |
+| **Qt Widgets** | **Verified, bounded original widget transfer** | Krita 5.2.9 triangle selector/interface compiled unchanged with a new RGB boundary inside OBS 30.0.2 / Qt 6.4.2, Linux x86-64/X11. Actual Qt signals/mouse events, GPU source/scene pixels, compositing, restart, ordinary launcher and guarded rollback. [Example](../examples/krita-obs/README.md). | Full original Krita app, ICC/HDR, brush engine, other Qt versions, QML/bindings and other platforms are not verified. The separate GIMP→OBS prototype remains pending. |
 | **Native Linux C ABI component** | **Verified component bridge** | Original compiled zlib 1.3 exercised through a bounded subprocess bridge, including a saved-file action in real VS Code. [Native component](NATIVE_COMPONENTS.md), [managed bridge](COMPONENT_BRIDGE.md). | A library/component route, not a desktop GUI framework. Does not establish Qt, GTK, Win32, .NET or JVM UI support. |
 
 The Electron evidence covers these particular roles and configurations:
@@ -30,7 +31,7 @@ React/Redux/Prism in the recovered renderer are dependencies within the Electron
 
 | Framework / architecture family | Status | Work needed for a first credible proof |
 | --- | --- | --- |
-| Qt Widgets / Qt Quick, including bindings such as PyQt | **In progress — not verified** | Experimental native OBS annotation dock/source compiles and links with OBS 30.0.2 / Qt 6.4.2 SDKs. Actual OBS load, rendered-source frames, UI/lifecycle and rollback remain required. QML and bindings are separate targets. [Gate and setup](CREATOR_EXAMPLES.md). |
+| Qt Quick/QML and Qt language bindings | Not started | Qt Widgets/Krita→OBS does not establish QML, PyQt or PySide host integration; each needs its own source/runtime and GUI acceptance. |
 | GTK / gtkmm / libadwaita | **In progress — not verified** | Pinned GIMP smoothing C source recovered; numeric/source-slice comparison passes. No GTK controls have run. Original GIMP/GTK donor observation remains required; no GTK widget/recipient integration is claimed. [Gate and setup](CREATOR_EXAMPLES.md). |
 | wxWidgets | Not started | Identify the feature's event/resource dependencies and platform port; build one recipient adapter. |
 | .NET WPF | Not started | Recover managed behavior and XAML/resources; bind UI thread/lifecycle and verify a real WPF host. |

@@ -1,0 +1,51 @@
+{
+  "schema": 1,
+  "name": "Krita triangle color selector \u2192 OBS live annotation dock",
+  "upstream": "https://invent.kde.org/graphics/krita",
+  "mirror": "https://github.com/KDE/krita",
+  "version": "5.2.9",
+  "commit": "ac6cae86d02ce033e81f20f70fdda10aa4fd8dfb",
+  "files": [
+    {
+      "path": "libs/widgets/KoTriangleColorSelector.cpp",
+      "sha256": "44499c62af88fb17a9e4cb35afecf97feb24570764a949be9a51611ae7a81b6f"
+    },
+    {
+      "path": "libs/widgets/KoTriangleColorSelector.h",
+      "sha256": "6bd88b656e50ffbd87c9652f199826b0691351e50cb1a221a85594fce5f4dc56"
+    },
+    {
+      "path": "libs/widgets/KisColorSelectorInterface.cpp",
+      "sha256": "f6448de55e77e13949f25a9c15708626604ef7b6b1d8dfcfd47d13242b19b472"
+    },
+    {
+      "path": "libs/widgets/KisColorSelectorInterface.h",
+      "sha256": "b871858217e0be53b94dfc97ad041241229092eb73b855b3daeb98b5d10a4b41"
+    },
+    {
+      "path": "libs/pigment/KoColorConversions.h",
+      "sha256": "ae4100a0ceb0b4b11255da271eb78a869976f3b2f867f34d78261a7805b081ca"
+    },
+    {
+      "path": "libs/pigment/KoColorDisplayRendererInterface.cpp",
+      "sha256": "7a0a9f6a9749a7062b3abfd459ef392cfbda419a397d5f6ee70f92e55825eb38"
+    },
+    {
+      "path": "COPYING",
+      "sha256": "8ceb4b9ee5adedde47b31e975c1d90c73ad27b6b165a1dcd80c7c545eb65b903"
+    },
+    {
+      "path": "LICENSES/LGPL-2.0-or-later.txt",
+      "sha256": "de588a8b1c41fe73ffe1201f9d12c718a988ed8e1302929625a6e7c2bced7461"
+    },
+    {
+      "path": "LICENSES/LGPL-2.1-or-later.txt",
+      "sha256": "1ccf09bf2f598308df4bed9cd8e9657dc5cd0973d2800318f2e241486e2edf3f"
+    },
+    {
+      "path": "LICENSES/GPL-3.0-only.txt",
+      "sha256": "2ca9503d76d1ffab14f599b4741382eec11face60ad1f0d7a41897809003a286"
+    }
+  ],
+  "scope": "Original Qt color selector and base class unchanged; new QColor RGB compatibility host, annotation engine, and OBS source. Not Krita brush engine or full color management."
+}

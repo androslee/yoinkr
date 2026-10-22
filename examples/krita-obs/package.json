@@ -1,0 +1,15 @@
+{
+  "name": "yoinkr-example-krita-obs",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "license": "GPL-3.0-only",
+  "scripts": {
+    "acquire": "node acquire.mjs",
+    "build": "node build.mjs",
+    "prepare:runtime": "node prepare.mjs",
+    "start": "node launch.mjs",
+    "verify": "node verify.mjs",
+    "rollback": "node rollback.mjs"
+  }
+}

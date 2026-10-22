@@ -39,6 +39,7 @@ Analysis and builds run locally without model tokens. Installing dependencies an
 
 | Example | What is transferred | Scope |
 | --- | --- | --- |
+| [Krita → OBS](examples/krita-obs/README.md) | Original Qt triangle color selector controlling transparent live ink | Actual OBS dock, GPU scene rendering, restart and guarded rollback verified on the pinned Linux/Qt lane. RGB host; not Krita’s full paint engine. |
 | [Screenity → Firefox](examples/screenity-firefox/README.md) | Original drawing, highlighting, arrows, shapes, text and history modules | Experimental Firefox recording studio with a separate portable browser/profile. Partial port; see the example for tested capture modes and limits. |
 | [MQTT Explorer → VS Code / Joplin](examples/mqtt-raw-diff/README.md) | Recovered Raw/Diff comparison UI | Scoped Linux native adapters, original/recipient comparisons and guarded rollback. |
 | [Element → VS Code](examples/element-search/README.md) | Original message-highlighting classes | Native local transcript-search window. Does not include Matrix services or the full Element UI. |

@@ -16,6 +16,7 @@ for(const file of files){
  try{info=await lstat(path);data=await readFile(path);}catch(error){if(error.code==='ENOENT'){problems.push(`Tracked file is missing; stage its removal: ${file}`);continue;}throw error;}
  if(info.isSymbolicLink())problems.push(`Review tracked symbolic link: ${file}`);
  bytes+=data.length;
+ if(data.subarray(0,4).equals(Buffer.from([0x7f,0x45,0x4c,0x46]))||data.subarray(0,2).toString()==='MZ'||/\.(?:so(?:\.\d+)*|dll|exe|appimage|deb|rpm|msi|dmg|tgz)$/i.test(file))problems.push(`Executable/runtime artifact tracked: ${file}`);
  if(data.length>5*1024*1024)problems.push(`Unexpected file above 5 MiB: ${file}`);
  const text=data.toString('utf8');
  if(credentials.some(pattern=>pattern.test(text)))problems.push(`Credential-like content: ${file}`);

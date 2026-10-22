@@ -15,3 +15,5 @@ Compile with OBS and Qt development SDKs. [SDK requirements, commands and GUI ve
 **Status:** original numerical comparisons and Linux SDK compilation/linking passed. Actual GIMP/GTK donor observation and OBS/Qt loading, drawing, rendered frames, lifecycle and rollback remain pending. Do not install an unverified binary into your production streaming setup. This source example is not an assertion of general Qt/GTK interoperability.
 
 Source pins and original licenses are retained in generated output. Build artifacts and downloaded SDKs stay local and are not included in Git.
+
+For a Qt widget transfer with actual OBS GUI/GPU acceptance, see [Krita → OBS](../krita-obs/README.md). This does not change the GIMP/GTK status above.

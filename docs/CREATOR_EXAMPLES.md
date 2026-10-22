@@ -91,6 +91,6 @@ Update `FRAMEWORK_SUPPORT.md` and `FRAMEWORK_EXAMPLES.md` after these actual che
 3. **Cross-application comparison:** compare controlled trace/configuration cases, record differences in pointer velocity and UI semantics, and preserve failures. Verify an actual source frame, not just that a dock appears or the `.so` links.
 4. Mark the passed **specific routes** as verified: GTK/GIMP donor observation/source recovery and Qt/OBS recipient adaptation. This example does not transplant a GTK widget, establish arbitrary GTK hosts or prove every Qt version. If those remain untested, keep their limits explicit even when the named transfer passes.
 
-Current matrix status for Qt and GTK is **in progress; native acceptance pending**. The requested verification update is part of completing this example; it has not been prematurely promoted by this first implementation.
+This GIMP→OBS route remains **in progress; native acceptance pending**. Qt Widgets now has a separate verified [Krita→OBS source-widget route](../examples/krita-obs/README.md); it does not verify this GIMP module or GTK. The requested verification update is part of completing this example; it has not been prematurely promoted by this first implementation.
 
 The original implementation proof is retained in `evidence/v0.27/`. Rebranding and compatibility checks are recorded separately in `evidence/v0.28/`; historical receipts and builds retain the former project name.

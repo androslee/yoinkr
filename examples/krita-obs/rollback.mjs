@@ -1,0 +1,12 @@
+import {readFile,rm} from 'node:fs/promises';
+import {join,dirname,resolve,sep} from 'node:path';
+import {fileURLToPath} from 'node:url';
+import {createHash} from 'node:crypto';
+const root=dirname(fileURLToPath(import.meta.url));
+const local=join(root,'.local');const config=resolve(process.env.YOINKR_LAB_CONFIG||join(local,'lab-config'));if(!config.startsWith(local+sep))throw new Error('Configuration must belong to this lab.');
+const installed=join(config,'obs-studio/plugins/yoinkr-krita-ink');
+const receipt=JSON.parse(await readFile(join(root,'.local/build/BUILD.json')));
+const module=await readFile(join(installed,'bin/64bit/yoinkr-krita-ink.so'));
+if(createHash('sha256').update(module).digest('hex')!==receipt.moduleSha256)throw new Error('Installed module changed; refusing rollback.');
+await rm(installed,{recursive:true});
+console.log('Removed the owned lab plugin. Your original OBS installation and lab scenes/profile remain intact. Running launch.mjs installs the example again.');
