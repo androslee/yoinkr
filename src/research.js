@@ -1,6 +1,6 @@
 // Investigation cases combine REA Evidence with Universal-Modder-style route,
 // provenance and a private working set. No source/recipient execution here.
-import {resolve,join,dirname,relative,isAbsolute} from 'node:path';
+import {resolve,join,dirname,relative,isAbsolute,basename} from 'node:path';
 import {readFile,writeFile,mkdir,realpath,stat,rm} from 'node:fs/promises';
 import {randomUUID,createHash} from 'node:crypto';
 import {runRea,reaInfo} from './rea.js';
@@ -10,6 +10,16 @@ const json=async(path,value)=>writeFile(path,JSON.stringify(value,null,2)+'\n',{
 const inside=(root,path)=>{const rel=relative(root,path);return rel!==''&&!isAbsolute(rel)&&rel!=='..'&&!rel.startsWith('..'+(process.platform==='win32'?'\\':'/'));};
 export function safeRelative(path){
  if(typeof path!=='string'||!path||isAbsolute(path)||path.includes('\\')||path.includes(':')||path.split('/').some(p=>!p||p==='.'||p==='..'))throw Error('expected a relative artifact path without traversal');return path;
+}
+
+// Canonical form of a path that need not exist yet: realpath the nearest existing ancestor and
+// re-append the missing segments. Containment guards must compare canonical against canonical --
+// on macOS /var is a symlink to /private/var, so a raw path tested against a realpath'd root
+// looks unrelated and the guard silently passes.
+export async function canonicalTarget(path){
+ const dest=resolve(path);let parent=dirname(dest),suffix=[basename(dest)];
+ for(;;){try{parent=await realpath(parent);break;}catch(err){if(err.code!=='ENOENT')throw err;const up=dirname(parent);if(up===parent)throw err;suffix.unshift(basename(parent));parent=up;}}
+ return join(parent,...suffix);
 }
 export async function applicationRoot(path){
  const root=await realpath(resolve(path)),s=await stat(root);if(s.isFile()){if(!root.endsWith('.asar'))throw Error('this first REA workflow accepts JS directories or .asar archives');return root;}
@@ -39,7 +49,8 @@ export async function investigate({donor,recipient,feature,seed,seedKind='module
  if(!Object.hasOwn(ROUTES,route))throw Error('unknown transfer route');
  const a=await applicationRoot(donor),b=await applicationRoot(recipient),dest=resolve(out);
  // Never put a growing analysis case inside either analyzed directory.
- if(dest===a||dest===b||inside(a,dest)||inside(b,dest))throw Error('case output must be outside donor and recipient');
+ const destCanonical=await canonicalTarget(dest);
+ for(const target of [dest,destCanonical])if(target===a||target===b||inside(a,target)||inside(b,target))throw Error('case output must be outside donor and recipient');
  for(const p of [...donorSources,...recipientSources])safeRelative(p);
  await mkdir(dirname(dest),{recursive:true});const caseDir=await realpath(dirname(dest));if(caseDir===a||caseDir===b||inside(a,caseDir)||inside(b,caseDir))throw Error('case parent resolves inside an application');
  await mkdir(dest,{mode:0o700}); // Fail if a case already exists; never overwrite evidence.
