@@ -1,12 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {mkdtemp,readFile,writeFile,rm,symlink,unlink,mkdir} from 'node:fs/promises';
+import {mkdtemp,readFile,writeFile,rm,symlink,unlink,mkdir,realpath} from 'node:fs/promises';
 import {join} from 'node:path';
 import {tmpdir} from 'node:os';
 import {exportDeliveryBundle,importDeliveryBundle,inspectDeliveryBundle,checkDelivery,loadDeliveryConfig,runDelivery} from '../src/delivery.js';
 import {createAgent} from '../src/agent.js';
 import {startWorkbench} from '../src/workbench.js';
-const fixture=async()=>{const root=await mkdtemp(join(tmpdir(),'yoinkr-delivery-test-'));const bundle=join(root,'reference');await exportDeliveryBundle(bundle);const config=join(root,'delivery.json');await writeFile(config,JSON.stringify({schema:1,bundle:'reference',donor:'missing-donor',source:'missing-source',runtimes:{vscode:'missing-code',joplin:'missing-joplin'},outputRoot:'runs',xvfb:'missing-display',playwrightModule:'missing-playwright'}));return {root,bundle,config,clean:()=>rm(root,{recursive:true,force:true})};};
+const fixture=async()=>{const root=await realpath(await mkdtemp(join(tmpdir(),'yoinkr-delivery-test-')));const bundle=join(root,'reference');await exportDeliveryBundle(bundle);const config=join(root,'delivery.json');await writeFile(config,JSON.stringify({schema:1,bundle:'reference',donor:'missing-donor',source:'missing-source',runtimes:{vscode:'missing-code',joplin:'missing-joplin'},outputRoot:'runs',xvfb:'missing-display',playwrightModule:'missing-playwright'}));return {root,bundle,config,clean:()=>rm(root,{recursive:true,force:true})};};
 test('recipe export/import has a stable digest and no private paths or donor payloads',async()=>{
  const f=await fixture();try{const before=await inspectDeliveryBundle(f.bundle),imported=await importDeliveryBundle(f.bundle,join(f.root,'imported'));assert.equal(before.digest,imported.digest);assert.equal(before.files.length,8);for(const file of before.files){const s=await readFile(join(f.bundle,file.path),'utf8');assert.ok(!/\/home\/[^/]+\//.test(s));assert.ok(!s.includes('builds/vscode-raw'));}await assert.rejects(importDeliveryBundle(f.bundle,join(f.root,'imported')),/EEXIST/);await assert.rejects(importDeliveryBundle(f.bundle,join(f.bundle,'nested')),/outside/);}finally{await f.clean();}
 });
@@ -43,7 +43,7 @@ test('workbench can start with only delivery, authenticates routes and retains b
 test('minimal preview server is released if browser startup fails',async()=>{
  const {minimalFeatureDriver}=await import('../src/feature-drivers/minimal.js');
  const {canonical}=await import('../src/feature-package.js');const {sha256}=await import('../src/workspace.js');
- const root=await mkdtemp(join(tmpdir(),'yoinkr-delivery-startup-'));
+ const root=await realpath(await mkdtemp(join(tmpdir(),'yoinkr-delivery-startup-')));
  try{
   const recipe=JSON.parse(await readFile(new URL('../recipes/mqtt-raw-diff/recipe.json',import.meta.url))),files=[];
   for(const path of ['payload/feature.js','payload/index.html','RECIPE.json','DEPENDENCIES.json','TRANSFORMS.json','PROVENANCE.json']){const bytes=Buffer.from(path);await mkdir(join(root,path,'..'),{recursive:true});await writeFile(join(root,path),bytes);files.push({path,bytes:bytes.length,sha256:sha256(bytes)});}

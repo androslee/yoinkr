@@ -1,11 +1,14 @@
 // Test helpers: build a real (tiny) asar on disk, and a mock CDP transport.
 
-import { writeFileSync, mkdirSync, rmSync, mkdtempSync } from 'node:fs';
+import { writeFileSync, mkdirSync, rmSync, mkdtempSync, realpathSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
+// Canonicalized, because the code under test returns realpath'd paths and on macOS the system
+// temp dir is reached through a symlink (/var -> /private/var). Raw mkdtemp paths would make
+// fixtures compare two different spellings of the same directory.
 export function tempDir(prefix = 'yoinkr-test-') {
-  return mkdtempSync(join(tmpdir(), prefix));
+  return realpathSync(mkdtempSync(join(tmpdir(), prefix)));
 }
 
 // entries: [{ path: 'package.json', content: {...}|string }]
@@ -59,5 +62,11 @@ export function mockTransport(handler) {
     close() { this.closed = true; closeHandlers.forEach((cb) => cb()); },
   };
 }
+
+// Host adapters and the native component host deliberately refuse to run off their verified
+// lane (see src/host-adapters/*.js). Tests that drive them past that gate only apply there;
+// the gate itself is covered separately on every platform.
+export const linuxX64 = process.platform === 'linux' && process.arch === 'x64';
+export const verifiedLane = linuxX64 ? {} : { skip: 'adapter is verified only on Linux x86-64' };
 
 export { mkdirSync, rmSync };

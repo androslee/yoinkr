@@ -1,18 +1,22 @@
 import {readFile,writeFile,mkdir,readdir,lstat,realpath,stat,rename,rm} from 'node:fs/promises';
 import {resolve,join,dirname,relative,isAbsolute,basename} from 'node:path';
 import {createHash,randomUUID} from 'node:crypto';
-import {applicationRoot,safeRelative} from './research.js';
+import {applicationRoot,safeRelative,canonicalTarget} from './research.js';
 import {readHeader,readEntryBuffer} from './asar.js';
 export const sha256=bytes=>createHash('sha256').update(bytes).digest('hex');
 export const inside=(root,path)=>{const r=relative(root,path);return r!==''&&!isAbsolute(r)&&r!=='..'&&!r.startsWith('../')&&!r.startsWith('..\\');};
 export async function readJson(file){if((await stat(file)).size>4*1024*1024)throw Error('metadata exceeds 4 MiB');return JSON.parse(await readFile(file,'utf8'));}
 export async function saveJson(file,value){await writeFile(file,JSON.stringify(value,null,2)+'\n',{flag:'wx',mode:0o600});}
 export async function writeState(file,value){const tmp=file+'.'+randomUUID()+'.tmp';try{await saveJson(tmp,value);await rename(tmp,file);}finally{await rm(tmp,{force:true});}}
-export async function containedFile(root,name){safeRelative(name);const file=await realpath(join(root,name));if(!inside(root,file)||!(await stat(file)).isFile())throw Error('file escaped root or is not ordinary: '+name);return file;}
+export async function containedFile(root,name){safeRelative(name);const base=await realpath(root),file=await realpath(join(base,name));if(!inside(base,file)||!(await stat(file)).isFile())throw Error('file escaped root or is not ordinary: '+name);return file;}
 export async function newDestination(path,protectedRoots){
- const dest=resolve(path);let parent=dirname(dest),suffix=[basename(dest)];
- for(;;){try{parent=await realpath(parent);break;}catch(err){if(err.code!=='ENOENT')throw err;const up=dirname(parent);if(up===parent)throw err;suffix.unshift(basename(parent));parent=up;}}
- const canonical=join(parent,...suffix);for(const root of protectedRoots)if(canonical===root||inside(root,canonical))throw Error('workspace must be outside the case, donor and recipient');return canonical;
+ const dest=resolve(path),canonical=await canonicalTarget(dest);
+ // Compare both spellings: a protected root may itself be given uncanonicalized.
+ for(const root of protectedRoots){
+  const resolved=resolve(root),real=await realpath(resolved).catch(err=>{if(err.code==='ENOENT')return resolved;throw err;});
+  for(const [base,target] of [[resolved,dest],[real,canonical]])if(target===base||inside(base,target))throw Error('workspace must be outside the case, donor and recipient');
+ }
+ return canonical;
 }
 const digestPattern=/^[a-f0-9]{64}$/;
 export function validateRecipe(r){
