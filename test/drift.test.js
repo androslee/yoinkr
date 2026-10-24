@@ -7,11 +7,16 @@ const dir = tempDir();
 const asar = writeAsar(dir, [
   { path: 'package.json', content: { name: 'fixture-app', version: '1.2.3' } },
   { path: 'dist/a.js', content: 'a' },
-  { path: 'dist/b.js', content: 'b' },
+  { path: 'dist/b.js', content: 'b' }
 ]);
 
 test('counts entries per top-level directory', () => {
-  const counts = countEntries({ files: { 'package.json': { offset: '0', size: '1' }, dist: { files: { a: { offset: '1', size: '1' }, b: { offset: '2', size: '1' } } } } });
+  const counts = countEntries({
+    files: {
+      'package.json': { offset: '0', size: '1' },
+      dist: { files: { a: { offset: '1', size: '1' }, b: { offset: '2', size: '1' } } }
+    }
+  });
   assert.deepEqual(counts, { '(root)': 1, dist: 2 });
 });
 
@@ -35,7 +40,7 @@ test('a changed asar is drift, and the policy decides the action', async () => {
     { path: 'package.json', content: { name: 'fixture-app', version: '1.3.0' } },
     { path: 'dist/a.js', content: 'a' },
     { path: 'dist/b.js', content: 'b' },
-    { path: 'dist/c.js', content: 'c' },
+    { path: 'dist/c.js', content: 'c' }
   ]);
   const after = await computeState({ appId: 'fixture-app', asarPath: asar2 });
 

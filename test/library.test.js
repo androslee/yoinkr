@@ -1,12 +1,153 @@
-import {test} from 'node:test';import assert from 'node:assert/strict';import {readFile,writeFile,mkdir,rm,rename,symlink,readdir} from 'node:fs/promises';import {join} from 'node:path';import {buildLibrary} from '../src/library.js';import {libraryFixture} from '../scripts/general/fixtures/library.mjs';
-async function fixture(t){const f=await libraryFixture();t.after(()=>rm(f.root,{recursive:true,force:true}));return f;}
-const citation=d=>({documentId:d.id,sha256:d.sha256,parentSha256:d.parentSha256});
-test('catalog covers cases, field notes, native records, conversions and playbooks with literal multi-term search',async t=>{const f=await fixture(t),b=await buildLibrary([f.records]);assert.equal(b.summary.sourceCount,5);assert.equal(b.summary.documentCount,9);assert.equal(b.search({query:'FINITE mqtt',kind:'note'}).total,1);assert.equal(b.search({query:'[.*]'}).total,0);assert.equal(b.search({kind:'native'}).items[0].status,'prepared');assert.equal(b.search({kind:'playbook'}).items[0].status,'restored');assert.equal(b.search({kind:'note',query:'verified'}).items[0].status,'manual');});
-test('recorded passes and failures require matching workspace identities; unmatched comparisons are omitted',async t=>{const f=await fixture(t);await f.save(join(f.native,'.native/runs/unbound.json'),{kind:'native-component-verification',passed:true,librarySha256:'wrong'});const b=await buildLibrary([f.records]);assert.equal(b.search({kind:'verification',status:'passed'}).total,1);assert.equal(b.search({kind:'verification',status:'failed'}).total,1);assert.ok(b.summary.warnings.some(w=>/bound/.test(w.error)));assert.match(b.search({kind:'verification'}).items[0].level,/current inputs not reverified/);});
-test('stable IDs, root deduplication, ranking and paging do not depend on rebuilding the catalog',async t=>{const f=await fixture(t),a=await buildLibrary([f.records]),b=await buildLibrary([f.records,f.cases[0]]);assert.equal(a.search().total,b.search().total);assert.deepEqual(a.search().items.map(x=>x.id),b.search().items.map(x=>x.id));const x=a.search({limit:2}),y=a.search({limit:2,offset:2});assert.equal(x.items.length,2);assert.equal(y.items.length,2);assert.notEqual(x.items[0].id,y.items[0].id);assert.equal(a.search({query:'Numeric plotting'}).items[0].kind,'case');});
-test('detail checks both the selected record and its parent metadata before displaying cached work',async t=>{const f=await fixture(t),b=await buildLibrary([f.records]),d=b.search({query:'finite',kind:'note'}).items[0];assert.match((await b.detail(d.id)).text,/Bounded history/);await writeFile(join(d.directory,'case.json'),'{}');await assert.rejects(b.detail(d.id),/parent record changed/);await assert.rejects(b.detail('/etc/passwd'),/not registered/);});
-test('manual findings are immutable and retain exact hash-bound citations after refresh',async t=>{const f=await fixture(t),b=await buildLibrary([f.records],{findingRoot:f.findings}),d=b.search({kind:'note'}).items[0],before=await readFile(d.path);const saved=await b.saveFinding({title:'Reuse isolated bridge',body:'Keep the bridge bounded. This is a manual finding.',tags:['ipc','reuse'],citations:[citation(d)]});assert.deepEqual(await readFile(d.path),before);assert.equal(saved.authority,'manual');assert.equal((await readdir(f.findings)).length,1);const next=await buildLibrary([f.records],{findingRoot:f.findings}),result=next.search({query:'ipc',kind:'finding'});assert.equal(result.total,1);assert.equal(result.items[0].status,'manual');assert.equal((await next.detail(result.items[0].id)).citations[0].integrity,'matches-saved-citation');assert.match((await next.detail(result.items[0].id)).text,/Keep the bridge/);});
-test('stale citations are refused before saving and existing findings expose changed/missing references',async t=>{const f=await fixture(t),b=await buildLibrary([f.records],{findingRoot:f.findings}),d=b.search({kind:'note'}).items[0],input={title:'Old conclusion',body:'Manual',tags:[],citations:[citation(d)]};await b.saveFinding(input);await writeFile(d.path,'# Changed source\nDifferent conclusion.');await assert.rejects(b.saveFinding(input),/record changed/);const next=await buildLibrary([f.records],{findingRoot:f.findings});await assert.rejects(next.saveFinding(input),/changed since selection/);const finding=next.search({kind:'finding'}).items[0];assert.equal((await next.detail(finding.id)).citations[0].integrity,'changed-since-citation');const only=await buildLibrary([],{findingRoot:f.findings});assert.equal((await only.detail(only.search({kind:'finding'}).items[0].id)).citations[0].integrity,'not-registered');});
-test('out-of-scope citation paths, unknown fields, missing citations and redirected finding stores are refused',async t=>{const f=await fixture(t),b=await buildLibrary([f.records],{findingRoot:f.findings}),d=b.search().items[0],input={title:'A',body:'B',tags:[],citations:[citation(d)]};for(const patch of [{out:'/tmp/anything'},{citations:[]},{citations:[{...citation(d),path:'/etc/passwd'}]},{citations:[{...citation(d),documentId:'not-registered'}]}])await assert.rejects(b.saveFinding({...input,...patch}));await rename(f.findings,f.findings+'-old');await mkdir(join(f.root,'elsewhere'));await symlink(join(f.root,'elsewhere'),f.findings);await assert.rejects(b.saveFinding(input),/redirected/);assert.deepEqual(await readdir(join(f.root,'elsewhere')),[]);});
-test('discovery skips runtime trees, evidence graphs and symlink directories; detail refuses source redirection',async t=>{const f=await fixture(t);await mkdir(join(f.records,'runtime'));await f.save(join(f.records,'runtime/case.json'),{schema:1,id:'hidden',feature:'secretkeyword',donor:{},recipient:{}});await symlink(join(f.records,'runtime'),join(f.records,'external-link'));const b=await buildLibrary([f.records]);assert.equal(b.search({query:'secretkeyword'}).total,0);const d=b.search({kind:'case'}).items[0];await rename(d.directory,d.directory+'-old');await symlink(join(f.records,'runtime'),d.directory);await assert.rejects(b.detail(d.id),/root changed/);});
-test('coverage limits and invalid searches are explicit rather than silently treated as complete',async t=>{const f=await fixture(t),limited=await buildLibrary([f.records],{maxDirectories:1});assert.equal(limited.summary.truncated,true);const small=await buildLibrary([f.records],{maxBytes:32});assert.equal(small.summary.truncated,true);const b=await buildLibrary([f.records]);for(const options of [{query:'x'.repeat(257)},{query:Array(13).fill('x').join(' ')},{kind:'arbitrary'},{status:'verified'},{limit:51},{offset:-1}])assert.throws(()=>b.search(options));});
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { readFile, writeFile, mkdir, rm, rename, symlink, readdir } from 'node:fs/promises';
+import { join } from 'node:path';
+import { buildLibrary } from '../src/library.js';
+import { libraryFixture } from '../scripts/general/fixtures/library.mjs';
+async function fixture(t) {
+  const f = await libraryFixture();
+  t.after(() => rm(f.root, { recursive: true, force: true }));
+  return f;
+}
+const citation = d => ({ documentId: d.id, sha256: d.sha256, parentSha256: d.parentSha256 });
+test('catalog covers cases, field notes, native records, conversions and playbooks with literal multi-term search', async t => {
+  const f = await fixture(t),
+    b = await buildLibrary([f.records]);
+  assert.equal(b.summary.sourceCount, 5);
+  assert.equal(b.summary.documentCount, 9);
+  assert.equal(b.search({ query: 'FINITE mqtt', kind: 'note' }).total, 1);
+  assert.equal(b.search({ query: '[.*]' }).total, 0);
+  assert.equal(b.search({ kind: 'native' }).items[0].status, 'prepared');
+  assert.equal(b.search({ kind: 'playbook' }).items[0].status, 'restored');
+  assert.equal(b.search({ kind: 'note', query: 'verified' }).items[0].status, 'manual');
+});
+test('recorded passes and failures require matching workspace identities; unmatched comparisons are omitted', async t => {
+  const f = await fixture(t);
+  await f.save(join(f.native, '.native/runs/unbound.json'), {
+    kind: 'native-component-verification',
+    passed: true,
+    librarySha256: 'wrong'
+  });
+  const b = await buildLibrary([f.records]);
+  assert.equal(b.search({ kind: 'verification', status: 'passed' }).total, 1);
+  assert.equal(b.search({ kind: 'verification', status: 'failed' }).total, 1);
+  assert.ok(b.summary.warnings.some(w => /bound/.test(w.error)));
+  assert.match(b.search({ kind: 'verification' }).items[0].level, /current inputs not reverified/);
+});
+test('stable IDs, root deduplication, ranking and paging do not depend on rebuilding the catalog', async t => {
+  const f = await fixture(t),
+    a = await buildLibrary([f.records]),
+    b = await buildLibrary([f.records, f.cases[0]]);
+  assert.equal(a.search().total, b.search().total);
+  assert.deepEqual(
+    a.search().items.map(x => x.id),
+    b.search().items.map(x => x.id)
+  );
+  const x = a.search({ limit: 2 }),
+    y = a.search({ limit: 2, offset: 2 });
+  assert.equal(x.items.length, 2);
+  assert.equal(y.items.length, 2);
+  assert.notEqual(x.items[0].id, y.items[0].id);
+  assert.equal(a.search({ query: 'Numeric plotting' }).items[0].kind, 'case');
+});
+test('detail checks both the selected record and its parent metadata before displaying cached work', async t => {
+  const f = await fixture(t),
+    b = await buildLibrary([f.records]),
+    d = b.search({ query: 'finite', kind: 'note' }).items[0];
+  assert.match((await b.detail(d.id)).text, /Bounded history/);
+  await writeFile(join(d.directory, 'case.json'), '{}');
+  await assert.rejects(b.detail(d.id), /parent record changed/);
+  await assert.rejects(b.detail('/etc/passwd'), /not registered/);
+});
+test('manual findings are immutable and retain exact hash-bound citations after refresh', async t => {
+  const f = await fixture(t),
+    b = await buildLibrary([f.records], { findingRoot: f.findings }),
+    d = b.search({ kind: 'note' }).items[0],
+    before = await readFile(d.path);
+  const saved = await b.saveFinding({
+    title: 'Reuse isolated bridge',
+    body: 'Keep the bridge bounded. This is a manual finding.',
+    tags: ['ipc', 'reuse'],
+    citations: [citation(d)]
+  });
+  assert.deepEqual(await readFile(d.path), before);
+  assert.equal(saved.authority, 'manual');
+  assert.equal((await readdir(f.findings)).length, 1);
+  const next = await buildLibrary([f.records], { findingRoot: f.findings }),
+    result = next.search({ query: 'ipc', kind: 'finding' });
+  assert.equal(result.total, 1);
+  assert.equal(result.items[0].status, 'manual');
+  assert.equal((await next.detail(result.items[0].id)).citations[0].integrity, 'matches-saved-citation');
+  assert.match((await next.detail(result.items[0].id)).text, /Keep the bridge/);
+});
+test('stale citations are refused before saving and existing findings expose changed/missing references', async t => {
+  const f = await fixture(t),
+    b = await buildLibrary([f.records], { findingRoot: f.findings }),
+    d = b.search({ kind: 'note' }).items[0],
+    input = { title: 'Old conclusion', body: 'Manual', tags: [], citations: [citation(d)] };
+  await b.saveFinding(input);
+  await writeFile(d.path, '# Changed source\nDifferent conclusion.');
+  await assert.rejects(b.saveFinding(input), /record changed/);
+  const next = await buildLibrary([f.records], { findingRoot: f.findings });
+  await assert.rejects(next.saveFinding(input), /changed since selection/);
+  const finding = next.search({ kind: 'finding' }).items[0];
+  assert.equal((await next.detail(finding.id)).citations[0].integrity, 'changed-since-citation');
+  const only = await buildLibrary([], { findingRoot: f.findings });
+  assert.equal(
+    (await only.detail(only.search({ kind: 'finding' }).items[0].id)).citations[0].integrity,
+    'not-registered'
+  );
+});
+test('out-of-scope citation paths, unknown fields, missing citations and redirected finding stores are refused', async t => {
+  const f = await fixture(t),
+    b = await buildLibrary([f.records], { findingRoot: f.findings }),
+    d = b.search().items[0],
+    input = { title: 'A', body: 'B', tags: [], citations: [citation(d)] };
+  for (const patch of [
+    { out: '/tmp/anything' },
+    { citations: [] },
+    { citations: [{ ...citation(d), path: '/etc/passwd' }] },
+    { citations: [{ ...citation(d), documentId: 'not-registered' }] }
+  ])
+    await assert.rejects(b.saveFinding({ ...input, ...patch }));
+  await rename(f.findings, f.findings + '-old');
+  await mkdir(join(f.root, 'elsewhere'));
+  await symlink(join(f.root, 'elsewhere'), f.findings);
+  await assert.rejects(b.saveFinding(input), /redirected/);
+  assert.deepEqual(await readdir(join(f.root, 'elsewhere')), []);
+});
+test('discovery skips runtime trees, evidence graphs and symlink directories; detail refuses source redirection', async t => {
+  const f = await fixture(t);
+  await mkdir(join(f.records, 'runtime'));
+  await f.save(join(f.records, 'runtime/case.json'), {
+    schema: 1,
+    id: 'hidden',
+    feature: 'secretkeyword',
+    donor: {},
+    recipient: {}
+  });
+  await symlink(join(f.records, 'runtime'), join(f.records, 'external-link'));
+  const b = await buildLibrary([f.records]);
+  assert.equal(b.search({ query: 'secretkeyword' }).total, 0);
+  const d = b.search({ kind: 'case' }).items[0];
+  await rename(d.directory, d.directory + '-old');
+  await symlink(join(f.records, 'runtime'), d.directory);
+  await assert.rejects(b.detail(d.id), /root changed/);
+});
+test('coverage limits and invalid searches are explicit rather than silently treated as complete', async t => {
+  const f = await fixture(t),
+    limited = await buildLibrary([f.records], { maxDirectories: 1 });
+  assert.equal(limited.summary.truncated, true);
+  const small = await buildLibrary([f.records], { maxBytes: 32 });
+  assert.equal(small.summary.truncated, true);
+  const b = await buildLibrary([f.records]);
+  for (const options of [
+    { query: 'x'.repeat(257) },
+    { query: Array(13).fill('x').join(' ') },
+    { kind: 'arbitrary' },
+    { status: 'verified' },
+    { limit: 51 },
+    { offset: -1 }
+  ])
+    assert.throws(() => b.search(options));
+});

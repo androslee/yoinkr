@@ -8,12 +8,19 @@ export function wsTransport(url) {
   let opened = false;
 
   const ready = new Promise((resolve, reject) => {
-    ws.addEventListener('open', () => { opened = true; resolve(); });
-    ws.addEventListener('error', (ev) => reject(new Error(`websocket error: ${ev?.message ?? 'unknown'}`)));
-    ws.addEventListener('close', () => { opened=false;reject(new Error('websocket closed before or after connection'));closeHandlers.forEach(cb=>cb()); });
-    ws.addEventListener('message', (ev) => {
+    ws.addEventListener('open', () => {
+      opened = true;
+      resolve();
+    });
+    ws.addEventListener('error', ev => reject(new Error(`websocket error: ${ev?.message ?? 'unknown'}`)));
+    ws.addEventListener('close', () => {
+      opened = false;
+      reject(new Error('websocket closed before or after connection'));
+      closeHandlers.forEach(cb => cb());
+    });
+    ws.addEventListener('message', ev => {
       const data = typeof ev.data === 'string' ? ev.data : Buffer.from(ev.data).toString('utf8');
-      messageHandlers.forEach((cb) => cb(data));
+      messageHandlers.forEach(cb => cb(data));
     });
   });
 
@@ -23,9 +30,19 @@ export function wsTransport(url) {
       if (!opened) throw new Error('transport not open');
       ws.send(text);
     },
-    onMessage(cb) { messageHandlers.push(cb); },
-    onClose(cb) { closeHandlers.push(cb); },
-    close() { try { ws.close(); } catch { /* already closed */ } },
+    onMessage(cb) {
+      messageHandlers.push(cb);
+    },
+    onClose(cb) {
+      closeHandlers.push(cb);
+    },
+    close() {
+      try {
+        ws.close();
+      } catch {
+        /* already closed */
+      }
+    }
   };
 }
 

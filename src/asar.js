@@ -17,19 +17,20 @@ export function readHeader(archive) {
   const fd = openSync(archive, 'r');
   try {
     const outer = Buffer.alloc(OUTER_PICKLE_BYTES);
-    const archiveSize=fstatSync(fd).size;
-    if(readSync(fd,outer,0,OUTER_PICKLE_BYTES,0)!==OUTER_PICKLE_BYTES)throw new Error('truncated asar header');
+    const archiveSize = fstatSync(fd).size;
+    if (readSync(fd, outer, 0, OUTER_PICKLE_BYTES, 0) !== OUTER_PICKLE_BYTES) throw new Error('truncated asar header');
     const payloadSize = outer.readUInt32LE(4);
-    if (payloadSize < 8 || payloadSize > MAX_HEADER_BYTES || payloadSize > archiveSize-8) {
+    if (payloadSize < 8 || payloadSize > MAX_HEADER_BYTES || payloadSize > archiveSize - 8) {
       throw new Error(`asar header size out of range: ${payloadSize}`);
     }
     const picklePayload = Buffer.alloc(payloadSize);
-    if(readSync(fd,picklePayload,0,payloadSize,OUTER_PICKLE_BYTES)!==payloadSize)throw new Error('truncated asar header');
+    if (readSync(fd, picklePayload, 0, payloadSize, OUTER_PICKLE_BYTES) !== payloadSize)
+      throw new Error('truncated asar header');
     const strLen = picklePayload.readUInt32LE(4);
     if (8 + strLen > payloadSize) throw new Error('asar header string overruns pickle');
     return {
       header: JSON.parse(picklePayload.subarray(8, 8 + strLen).toString('utf8')),
-      dataOffset: OUTER_PICKLE_BYTES + payloadSize,
+      dataOffset: OUTER_PICKLE_BYTES + payloadSize
     };
   } finally {
     closeSync(fd);
@@ -54,14 +55,16 @@ export function readEntryBuffer(archive, path, maxBytes = 8 * 1024 * 1024) {
   if (!Number.isSafeInteger(size) || size < 0 || size > maxBytes) {
     throw new Error(`asar entry size out of range: ${path} (${entry.size})`);
   }
-  if(entry.unpacked)throw new Error(`asar entry is unpacked: ${path}`);
-  const relativeOffset=Number(entry.offset),offset=dataOffset+relativeOffset;
-  if(!Number.isSafeInteger(relativeOffset)||relativeOffset<0||!Number.isSafeInteger(offset))throw new Error('asar entry offset out of range');
+  if (entry.unpacked) throw new Error(`asar entry is unpacked: ${path}`);
+  const relativeOffset = Number(entry.offset),
+    offset = dataOffset + relativeOffset;
+  if (!Number.isSafeInteger(relativeOffset) || relativeOffset < 0 || !Number.isSafeInteger(offset))
+    throw new Error('asar entry offset out of range');
   const fd = openSync(archive, 'r');
   try {
-    if(offset+size>fstatSync(fd).size)throw new Error('asar entry exceeds archive bounds');
+    if (offset + size > fstatSync(fd).size) throw new Error('asar entry exceeds archive bounds');
     const buf = Buffer.alloc(size);
-    if(readSync(fd,buf,0,size,offset)!==size)throw new Error('truncated asar entry');
+    if (readSync(fd, buf, 0, size, offset) !== size) throw new Error('truncated asar entry');
     return buf;
   } finally {
     closeSync(fd);
@@ -78,7 +81,7 @@ export function sha256File(path) {
     const hash = createHash('sha256');
     const stream = createReadStream(path);
     stream.on('error', reject);
-    stream.on('data', (chunk) => hash.update(chunk));
+    stream.on('data', chunk => hash.update(chunk));
     stream.on('end', () => resolve(hash.digest('hex')));
   });
 }

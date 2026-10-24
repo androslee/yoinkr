@@ -1,20 +1,241 @@
-import test from 'node:test';import assert from 'node:assert/strict';import {join} from 'node:path';import {mkdir,writeFile,readFile,rm,symlink} from 'node:fs/promises';
-import {tempDir} from './helpers.js';import {sha256} from '../src/workspace.js';import {loadSources,inspectSource,reportSources} from '../src/sources.js';import {createCaseReport} from '../src/investigation.js';
-async function fixture(extra={}){
- const root=tempDir(),donor=tempDir(),recipient=tempDir(),directory=join(root,'private','export-test');await mkdir(join(root,'evidence'));await mkdir(join(directory,'files','dist'),{recursive:true});
- const map={version:3,file:'bundle.js',sources:['../original.ts'],sourceRoot:'https://never-fetch.invalid/',names:[],mappings:'AAAA,K;AACA;AACA',sourcesContent:['const original = 1;\nconst value = "</script><script>window.bad=1</script>";\nexport {value};']};
- const content={'dist/bundle.js':'const compiled = 1;\nconst value = "compiled";\nexport {value};','dist/bundle.js.map':JSON.stringify(map),'binary.bin':Buffer.from([0,255,1]),...extra};const artifact='a'.repeat(64),files=[];
- for(const [path,bytes]of Object.entries(content)){await mkdir(join(directory,'files',path,'..'),{recursive:true});await writeFile(join(directory,'files',path),bytes);files.push({path,sha256:sha256(bytes),analysisBound:path==='dist/bundle.js'});}
- const evidenceHashes={};for(const side of ['donor','recipient','trace']){const graph={schema:'JavaScriptApplicationGraph',nodes:side==='donor'?[{node_id:'n1',kind:'javascript-asset',observations:[{label:'dist/bundle.js',properties:{path:'dist/bundle.js'},evidence:{artifact:{sha256:files[0].sha256},location:{value:{kind:'source-range',source:'dist/bundle.js',start:{line:2,column:0}}}}}]}]:[],edges:[]};const bytes=JSON.stringify({ok:true,data:{evidence_id:'ev_'+side,normalized_result:{root_artifact_sha256:artifact,graph}}});await writeFile(join(root,'evidence',side+'.json'),bytes);evidenceHashes[side+'.json']=sha256(bytes);}
- const record={schema:1,id:'case',feature:'Source inspector fixture',provider:{version:'test'},status:'investigated',donor:{path:donor,evidenceId:'ev_donor',artifactSha256:artifact},recipient:{path:recipient,evidenceId:'ev_recipient'},trace:{evidenceId:'ev_trace'},evidenceHashes};await writeFile(join(root,'case.json'),JSON.stringify(record));const manifest={schema:1,caseId:'case',donorArtifact:artifact,files};await writeFile(join(directory,'EXPORT.json'),JSON.stringify(manifest));return {root,directory,manifest,map};
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { join } from 'node:path';
+import { mkdir, writeFile, readFile, rm, symlink } from 'node:fs/promises';
+import { tempDir } from './helpers.js';
+import { sha256 } from '../src/workspace.js';
+import { loadSources, inspectSource, reportSources } from '../src/sources.js';
+import { createCaseReport } from '../src/investigation.js';
+async function fixture(extra = {}) {
+  const root = tempDir(),
+    donor = tempDir(),
+    recipient = tempDir(),
+    directory = join(root, 'private', 'export-test');
+  await mkdir(join(root, 'evidence'));
+  await mkdir(join(directory, 'files', 'dist'), { recursive: true });
+  const map = {
+    version: 3,
+    file: 'bundle.js',
+    sources: ['../original.ts'],
+    sourceRoot: 'https://never-fetch.invalid/',
+    names: [],
+    mappings: 'AAAA,K;AACA;AACA',
+    sourcesContent: ['const original = 1;\nconst value = "</script><script>window.bad=1</script>";\nexport {value};']
+  };
+  const content = {
+    'dist/bundle.js': 'const compiled = 1;\nconst value = "compiled";\nexport {value};',
+    'dist/bundle.js.map': JSON.stringify(map),
+    'binary.bin': Buffer.from([0, 255, 1]),
+    ...extra
+  };
+  const artifact = 'a'.repeat(64),
+    files = [];
+  for (const [path, bytes] of Object.entries(content)) {
+    await mkdir(join(directory, 'files', path, '..'), { recursive: true });
+    await writeFile(join(directory, 'files', path), bytes);
+    files.push({ path, sha256: sha256(bytes), analysisBound: path === 'dist/bundle.js' });
+  }
+  const evidenceHashes = {};
+  for (const side of ['donor', 'recipient', 'trace']) {
+    const graph = {
+      schema: 'JavaScriptApplicationGraph',
+      nodes:
+        side === 'donor'
+          ? [
+              {
+                node_id: 'n1',
+                kind: 'javascript-asset',
+                observations: [
+                  {
+                    label: 'dist/bundle.js',
+                    properties: { path: 'dist/bundle.js' },
+                    evidence: {
+                      artifact: { sha256: files[0].sha256 },
+                      location: {
+                        value: { kind: 'source-range', source: 'dist/bundle.js', start: { line: 2, column: 0 } }
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          : [],
+      edges: []
+    };
+    const bytes = JSON.stringify({
+      ok: true,
+      data: { evidence_id: 'ev_' + side, normalized_result: { root_artifact_sha256: artifact, graph } }
+    });
+    await writeFile(join(root, 'evidence', side + '.json'), bytes);
+    evidenceHashes[side + '.json'] = sha256(bytes);
+  }
+  const record = {
+    schema: 1,
+    id: 'case',
+    feature: 'Source inspector fixture',
+    provider: { version: 'test' },
+    status: 'investigated',
+    donor: { path: donor, evidenceId: 'ev_donor', artifactSha256: artifact },
+    recipient: { path: recipient, evidenceId: 'ev_recipient' },
+    trace: { evidenceId: 'ev_trace' },
+    evidenceHashes
+  };
+  await writeFile(join(root, 'case.json'), JSON.stringify(record));
+  const manifest = { schema: 1, caseId: 'case', donorArtifact: artifact, files };
+  await writeFile(join(directory, 'EXPORT.json'), JSON.stringify(manifest));
+  return { root, directory, manifest, map };
 }
-test('source reader uses verified exported bytes, independently distinguishes analysis and extraction, and keeps binary inert',async()=>{const f=await fixture(),s=await loadSources(f.root,f.directory);assert.equal(s.files[0].basis,'analysis-bound');assert.equal(s.files[1].basis,'extraction-only');assert.equal(s.files[2].text,null);const source=await inspectSource(f.root,{exportDirectory:f.directory,file:'dist/bundle.js',line:2});assert.equal(source.excerpt[1].line,2);assert.match(source.excerpt[1].text,/compiled/);assert.equal(source.lineCount,3);assert.equal((await inspectSource(f.root,{exportDirectory:f.directory,file:'binary.bin'})).binary,true);});
-test('export hash tampering and forged manifest hashes cannot bypass retained REA file identity',async()=>{const f=await fixture(),file=join(f.directory,'files','dist/bundle.js');await writeFile(file,'changed');await assert.rejects(loadSources(f.root,f.directory),/export file changed/);f.manifest.files[0].sha256=sha256('changed');f.manifest.files[0].analysisBound=false;await writeFile(join(f.directory,'EXPORT.json'),JSON.stringify(f.manifest));await assert.rejects(loadSources(f.root,f.directory),/retained REA bytes/);});
-test('source reader refuses unrelated cases, forged analysis claims, duplicate paths and missing selected source',async()=>{const f=await fixture();const save=()=>writeFile(join(f.directory,'EXPORT.json'),JSON.stringify(f.manifest));f.manifest.caseId='wrong';await save();await assert.rejects(loadSources(f.root,f.directory),/identity/);f.manifest.caseId='case';f.manifest.files[1].analysisBound=true;await save();await assert.rejects(loadSources(f.root,f.directory),/analysis-bound/);f.manifest.files[1].analysisBound=false;f.manifest.files.push(f.manifest.files[0]);await save();await assert.rejects(loadSources(f.root,f.directory),/duplicate/);f.manifest.files.pop();await save();await assert.rejects(inspectSource(f.root,{exportDirectory:f.directory,file:'not-exported.js'}),/explicit export/);});
-test('source and export-directory symlinks cannot escape the case/export or traverse artifact names',async()=>{const f=await fixture(),outside=tempDir();await writeFile(join(outside,'secret'),'secret');await rm(join(f.directory,'files','dist','bundle.js'));await symlink(join(outside,'secret'),join(f.directory,'files','dist','bundle.js'));await assert.rejects(loadSources(f.root,f.directory),/escaped/);await assert.rejects(loadSources(f.root,outside),/belong/);await assert.rejects(inspectSource(f.root,{exportDirectory:f.directory,file:'../secret'}),/relative/);});
-test('flat source-map decoder traces original line/column and distinguishes an explicit unmapped segment',async()=>{const f=await fixture(),options={exportDirectory:f.directory,file:'dist/bundle.js',map:'dist/bundle.js.map'};const mapped=await inspectSource(f.root,{...options,line:2,column:0});assert.equal(mapped.mapping.status,'mapped');assert.equal(mapped.mapping.original.line,2);assert.equal(mapped.mapping.original.column,0);assert.equal(mapped.mapping.original.embedded,true);assert.match(mapped.mapping.original.source,/never-fetch/);assert.equal(mapped.mapping.original.sha256,sha256(f.map.sourcesContent[0]));assert.match(mapped.mapping.original.basis,/not independently/);assert.equal((await inspectSource(f.root,{...options,line:1,column:5})).mapping.status,'unmapped');assert.equal((await inspectSource(f.root,{...options,line:50})).mapping.status,'unmapped');await assert.rejects(inspectSource(f.root,{...options,line:0}),/positive/);await assert.rejects(inspectSource(f.root,{...options,column:-1}),/nonnegative/);});
-test('missing embedded source remains unavailable without resolving sourceRoot or URLs',async()=>{const f=await fixture();delete f.map.sourcesContent;const bytes=JSON.stringify(f.map);await writeFile(join(f.directory,'files','dist','bundle.js.map'),bytes);f.manifest.files[1].sha256=sha256(bytes);await writeFile(join(f.directory,'EXPORT.json'),JSON.stringify(f.manifest));const result=await inspectSource(f.root,{exportDirectory:f.directory,file:'dist/bundle.js',map:'dist/bundle.js.map'});assert.equal(result.mapping.original.embedded,false);assert.deepEqual(result.mapping.original.excerpt,[]);assert.equal(result.mapping.original.sha256,null);});
-test('source-map generated-file association is explicit; indexed maps remain unsupported rather than silently misread',async()=>{const f=await fixture();f.map.file='different.js';let bytes=JSON.stringify(f.map);await writeFile(join(f.directory,'files','dist','bundle.js.map'),bytes);f.manifest.files[1].sha256=sha256(bytes);await writeFile(join(f.directory,'EXPORT.json'),JSON.stringify(f.manifest));await assert.rejects(inspectSource(f.root,{exportDirectory:f.directory,file:'dist/bundle.js',map:'dist/bundle.js.map'}),/does not identify/);f.map.sections=[];bytes=JSON.stringify(f.map);await writeFile(join(f.directory,'files','dist','bundle.js.map'),bytes);f.manifest.files[1].sha256=sha256(bytes);await writeFile(join(f.directory,'EXPORT.json'),JSON.stringify(f.manifest));const report=await reportSources(f.root,f.directory);assert.equal(report.maps[0].status,'unsupported');assert.match(report.maps[0].error,/flat version 3/);});
-test('source reports preserve source/map hashes, escape active content and explicitly limit preview text',async()=>{const f=await fixture({'large.txt':'x'.repeat(300000)});const sources=await reportSources(f.root,f.directory);assert.equal(sources.maps[0].status,'decoded');assert.equal(sources.maps[0].originals[0].sha256,sha256(f.map.sourcesContent[0]));const large=sources.files.find(f=>f.path==='large.txt');assert.equal(large.text.length,256*1024);assert.equal(large.omittedCharacters,300000-256*1024);const out=join(tempDir(),'report.html');const result=await createCaseReport(f.root,out,{exportDirectory:f.directory});assert.equal(result.sourceFiles,4);assert.equal(result.sourceMaps,1);const html=await readFile(out,'utf8');assert.ok(html.includes('\\u003c/script\\u003e'));assert.ok(!html.includes('<script>window.bad=1'));});
-test('malformed or oversized source maps remain explicit unsupported records in reports',async()=>{for(const mapText of ['not json',JSON.stringify({version:3,sources:[],names:[],mappings:'A'.repeat(256*1024+1)})]){const f=await fixture();await writeFile(join(f.directory,'files','dist','bundle.js.map'),mapText);f.manifest.files[1].sha256=sha256(mapText);await writeFile(join(f.directory,'EXPORT.json'),JSON.stringify(f.manifest));const result=await reportSources(f.root,f.directory);assert.equal(result.maps[0].status,'unsupported');await assert.rejects(inspectSource(f.root,{exportDirectory:f.directory,file:'dist/bundle.js',map:'dist/bundle.js.map'}));}});
-test('duplicate source names keep their distinct mapping indexes and embedded contents',async()=>{const f=await fixture();f.map.sources=['same.ts','same.ts'];f.map.sourcesContent=['first source','second source'];f.map.mappings='ACAA';const bytes=JSON.stringify(f.map);await writeFile(join(f.directory,'files','dist','bundle.js.map'),bytes);f.manifest.files[1].sha256=sha256(bytes);await writeFile(join(f.directory,'EXPORT.json'),JSON.stringify(f.manifest));const result=await inspectSource(f.root,{exportDirectory:f.directory,file:'dist/bundle.js',map:'dist/bundle.js.map'});assert.equal(result.mapping.original.sha256,sha256('second source'));assert.equal(result.mapping.original.excerpt[0].text,'second source');});
+test('source reader uses verified exported bytes, independently distinguishes analysis and extraction, and keeps binary inert', async () => {
+  const f = await fixture(),
+    s = await loadSources(f.root, f.directory);
+  assert.equal(s.files[0].basis, 'analysis-bound');
+  assert.equal(s.files[1].basis, 'extraction-only');
+  assert.equal(s.files[2].text, null);
+  const source = await inspectSource(f.root, { exportDirectory: f.directory, file: 'dist/bundle.js', line: 2 });
+  assert.equal(source.excerpt[1].line, 2);
+  assert.match(source.excerpt[1].text, /compiled/);
+  assert.equal(source.lineCount, 3);
+  assert.equal((await inspectSource(f.root, { exportDirectory: f.directory, file: 'binary.bin' })).binary, true);
+});
+test('export hash tampering and forged manifest hashes cannot bypass retained REA file identity', async () => {
+  const f = await fixture(),
+    file = join(f.directory, 'files', 'dist/bundle.js');
+  await writeFile(file, 'changed');
+  await assert.rejects(loadSources(f.root, f.directory), /export file changed/);
+  f.manifest.files[0].sha256 = sha256('changed');
+  f.manifest.files[0].analysisBound = false;
+  await writeFile(join(f.directory, 'EXPORT.json'), JSON.stringify(f.manifest));
+  await assert.rejects(loadSources(f.root, f.directory), /retained REA bytes/);
+});
+test('source reader refuses unrelated cases, forged analysis claims, duplicate paths and missing selected source', async () => {
+  const f = await fixture();
+  const save = () => writeFile(join(f.directory, 'EXPORT.json'), JSON.stringify(f.manifest));
+  f.manifest.caseId = 'wrong';
+  await save();
+  await assert.rejects(loadSources(f.root, f.directory), /identity/);
+  f.manifest.caseId = 'case';
+  f.manifest.files[1].analysisBound = true;
+  await save();
+  await assert.rejects(loadSources(f.root, f.directory), /analysis-bound/);
+  f.manifest.files[1].analysisBound = false;
+  f.manifest.files.push(f.manifest.files[0]);
+  await save();
+  await assert.rejects(loadSources(f.root, f.directory), /duplicate/);
+  f.manifest.files.pop();
+  await save();
+  await assert.rejects(
+    inspectSource(f.root, { exportDirectory: f.directory, file: 'not-exported.js' }),
+    /explicit export/
+  );
+});
+test('source and export-directory symlinks cannot escape the case/export or traverse artifact names', async () => {
+  const f = await fixture(),
+    outside = tempDir();
+  await writeFile(join(outside, 'secret'), 'secret');
+  await rm(join(f.directory, 'files', 'dist', 'bundle.js'));
+  await symlink(join(outside, 'secret'), join(f.directory, 'files', 'dist', 'bundle.js'));
+  await assert.rejects(loadSources(f.root, f.directory), /escaped/);
+  await assert.rejects(loadSources(f.root, outside), /belong/);
+  await assert.rejects(inspectSource(f.root, { exportDirectory: f.directory, file: '../secret' }), /relative/);
+});
+test('flat source-map decoder traces original line/column and distinguishes an explicit unmapped segment', async () => {
+  const f = await fixture(),
+    options = { exportDirectory: f.directory, file: 'dist/bundle.js', map: 'dist/bundle.js.map' };
+  const mapped = await inspectSource(f.root, { ...options, line: 2, column: 0 });
+  assert.equal(mapped.mapping.status, 'mapped');
+  assert.equal(mapped.mapping.original.line, 2);
+  assert.equal(mapped.mapping.original.column, 0);
+  assert.equal(mapped.mapping.original.embedded, true);
+  assert.match(mapped.mapping.original.source, /never-fetch/);
+  assert.equal(mapped.mapping.original.sha256, sha256(f.map.sourcesContent[0]));
+  assert.match(mapped.mapping.original.basis, /not independently/);
+  assert.equal((await inspectSource(f.root, { ...options, line: 1, column: 5 })).mapping.status, 'unmapped');
+  assert.equal((await inspectSource(f.root, { ...options, line: 50 })).mapping.status, 'unmapped');
+  await assert.rejects(inspectSource(f.root, { ...options, line: 0 }), /positive/);
+  await assert.rejects(inspectSource(f.root, { ...options, column: -1 }), /nonnegative/);
+});
+test('missing embedded source remains unavailable without resolving sourceRoot or URLs', async () => {
+  const f = await fixture();
+  delete f.map.sourcesContent;
+  const bytes = JSON.stringify(f.map);
+  await writeFile(join(f.directory, 'files', 'dist', 'bundle.js.map'), bytes);
+  f.manifest.files[1].sha256 = sha256(bytes);
+  await writeFile(join(f.directory, 'EXPORT.json'), JSON.stringify(f.manifest));
+  const result = await inspectSource(f.root, {
+    exportDirectory: f.directory,
+    file: 'dist/bundle.js',
+    map: 'dist/bundle.js.map'
+  });
+  assert.equal(result.mapping.original.embedded, false);
+  assert.deepEqual(result.mapping.original.excerpt, []);
+  assert.equal(result.mapping.original.sha256, null);
+});
+test('source-map generated-file association is explicit; indexed maps remain unsupported rather than silently misread', async () => {
+  const f = await fixture();
+  f.map.file = 'different.js';
+  let bytes = JSON.stringify(f.map);
+  await writeFile(join(f.directory, 'files', 'dist', 'bundle.js.map'), bytes);
+  f.manifest.files[1].sha256 = sha256(bytes);
+  await writeFile(join(f.directory, 'EXPORT.json'), JSON.stringify(f.manifest));
+  await assert.rejects(
+    inspectSource(f.root, { exportDirectory: f.directory, file: 'dist/bundle.js', map: 'dist/bundle.js.map' }),
+    /does not identify/
+  );
+  f.map.sections = [];
+  bytes = JSON.stringify(f.map);
+  await writeFile(join(f.directory, 'files', 'dist', 'bundle.js.map'), bytes);
+  f.manifest.files[1].sha256 = sha256(bytes);
+  await writeFile(join(f.directory, 'EXPORT.json'), JSON.stringify(f.manifest));
+  const report = await reportSources(f.root, f.directory);
+  assert.equal(report.maps[0].status, 'unsupported');
+  assert.match(report.maps[0].error, /flat version 3/);
+});
+test('source reports preserve source/map hashes, escape active content and explicitly limit preview text', async () => {
+  const f = await fixture({ 'large.txt': 'x'.repeat(300000) });
+  const sources = await reportSources(f.root, f.directory);
+  assert.equal(sources.maps[0].status, 'decoded');
+  assert.equal(sources.maps[0].originals[0].sha256, sha256(f.map.sourcesContent[0]));
+  const large = sources.files.find(f => f.path === 'large.txt');
+  assert.equal(large.text.length, 256 * 1024);
+  assert.equal(large.omittedCharacters, 300000 - 256 * 1024);
+  const out = join(tempDir(), 'report.html');
+  const result = await createCaseReport(f.root, out, { exportDirectory: f.directory });
+  assert.equal(result.sourceFiles, 4);
+  assert.equal(result.sourceMaps, 1);
+  const html = await readFile(out, 'utf8');
+  assert.ok(html.includes('\\u003c/script\\u003e'));
+  assert.ok(!html.includes('<script>window.bad=1'));
+});
+test('malformed or oversized source maps remain explicit unsupported records in reports', async () => {
+  for (const mapText of [
+    'not json',
+    JSON.stringify({ version: 3, sources: [], names: [], mappings: 'A'.repeat(256 * 1024 + 1) })
+  ]) {
+    const f = await fixture();
+    await writeFile(join(f.directory, 'files', 'dist', 'bundle.js.map'), mapText);
+    f.manifest.files[1].sha256 = sha256(mapText);
+    await writeFile(join(f.directory, 'EXPORT.json'), JSON.stringify(f.manifest));
+    const result = await reportSources(f.root, f.directory);
+    assert.equal(result.maps[0].status, 'unsupported');
+    await assert.rejects(
+      inspectSource(f.root, { exportDirectory: f.directory, file: 'dist/bundle.js', map: 'dist/bundle.js.map' })
+    );
+  }
+});
+test('duplicate source names keep their distinct mapping indexes and embedded contents', async () => {
+  const f = await fixture();
+  f.map.sources = ['same.ts', 'same.ts'];
+  f.map.sourcesContent = ['first source', 'second source'];
+  f.map.mappings = 'ACAA';
+  const bytes = JSON.stringify(f.map);
+  await writeFile(join(f.directory, 'files', 'dist', 'bundle.js.map'), bytes);
+  f.manifest.files[1].sha256 = sha256(bytes);
+  await writeFile(join(f.directory, 'EXPORT.json'), JSON.stringify(f.manifest));
+  const result = await inspectSource(f.root, {
+    exportDirectory: f.directory,
+    file: 'dist/bundle.js',
+    map: 'dist/bundle.js.map'
+  });
+  assert.equal(result.mapping.original.sha256, sha256('second source'));
+  assert.equal(result.mapping.original.excerpt[0].text, 'second source');
+});

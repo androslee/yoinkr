@@ -81,6 +81,11 @@ jobs:
       - name: Audit repository contents
         run: node scripts/general/check-repository.mjs
 
+      # Formatting is mechanical; a drifted file should fail here rather than turn up
+      # as noise in an unrelated review.
+      - name: Formatting
+        run: npm run format:check
+
   audit:
     # Gates on critical advisories only. The tree currently carries 4 high and 4 moderate
     # advisories, all transitive through the pinned rea-agents -> zod; gating on `high`

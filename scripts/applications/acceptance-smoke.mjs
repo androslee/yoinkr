@@ -1,24 +1,185 @@
-import {verificationOutput} from '../general/verification-output.mjs';
-import assert from 'node:assert/strict';import {mkdir,cp,readFile,writeFile,readdir} from 'node:fs/promises';import {join,resolve} from 'node:path';import {fileURLToPath} from 'node:url';import {startWorkbench} from '../../src/workbench.js';
-const project=fileURLToPath(new URL('../..',import.meta.url)),source=resolve((process.env.YOINKR_CASE??process.env.MODKIT_CASE)??join(project,'builds/feature-examples-v0.4/mqtt-case')),out=await verificationOutput('acceptance', process.env.YOINKR_EXAMPLES_EVIDENCE??process.env.MODKIT_EXAMPLES_EVIDENCE);await mkdir(out,{recursive:true});
-const root=join(out,'case');await mkdir(root);await cp(join(source,'evidence'),join(root,'evidence'),{recursive:true});await cp(join(source,'case.json'),join(root,'case.json'));const before=await readFile(join(root,'case.json'),'utf8');
-const app=await startWorkbench({cases:[root],port:0,reportRoot:join(out,'reports'),caseRoot:join(out,'new-cases')}),{chromium}=await import(process.env.PLAYWRIGHT_MODULE??'playwright'),browser=await chromium.launch({headless:true,args:['--no-sandbox','--disable-dev-shm-usage']});const checks=[];
-try{
- const page=await browser.newPage({viewport:{width:1450,height:1100}}),errors=[],requests=[];page.on('pageerror',e=>errors.push(e.message));page.on('request',r=>{if(/^https?:/.test(r.url()))requests.push(r.url());});await page.goto(app.url);await page.locator('#connection').filter({hasText:'Local service ready'}).waitFor();await page.locator('[data-action="example"]').click();assert.equal(await page.locator('.tabs button').evaluateAll(buttons=>buttons.some(b=>b.scrollWidth>b.clientWidth)),false);
- await page.locator('#example-title').fill('Planned JSON behavior');await page.locator('#example-steps').fill('Select a JSON topic\nChoose formatted view');await page.locator('#example-expected').fill('Indented JSON while retaining the original payload');
- const finished=async(n,status='complete')=>{await page.waitForFunction(({n,status})=>document.querySelectorAll('.job').length===n&&document.querySelector('.job strong')?.textContent.includes(status),{n,status},{timeout:30000});};
- await page.locator('#run').click();await finished(1);assert.match(await page.locator('#result').innerText(),/user-recorded-example/);checks.push('Workbench saves a planned observable example without claiming automated acceptance');
- const title='<img src="https://invalid.example/escape" onerror="window.injected=1">';await page.locator('#example-title').fill(title);await page.locator('#example-outcome').selectOption('observed-difference');await page.locator('#run').click();await finished(2,'failed');assert.match(await page.locator('#result').innerText(),/needs an observation/);assert.equal(await page.locator('#run').isDisabled(),false);checks.push('Observed outcomes require a concrete observation and failed validation releases controls');
- await page.locator('#example-observation').fill('Browser-test recording only: the expected payload view is not present in this workbench screenshot. This is not a donor execution test.');await page.locator('#example-side').selectOption('recipient');
- const shot=join(out,'test-workbench-screen.png');await page.screenshot({path:shot});await page.locator('#example-screenshot').setInputFiles(shot);await page.locator('#run').click();await finished(3);assert.match(await page.locator('#result').innerText(),/observed-difference/);
- const dirs=await readdir(join(root,'examples'));assert.equal(dirs.length,2);let observedDir;for(const dir of dirs){const p=join(root,'examples',dir);const record=JSON.parse(await readFile(join(p,'example.json'),'utf8'));if(record.outcome==='observed-difference')observedDir=p;}
- assert.ok(observedDir);assert.ok((await readFile(join(observedDir,'screenshot.png'))).equals(await readFile(shot)));checks.push('PNG screenshot upload retains exact original bytes and binds manual observation metadata to the case');
- await page.locator('[data-action="report"]').click();await page.locator('#run').click();await finished(4);let frame=page.frameLocator('#report-frame');await frame.locator('#examples').waitFor();assert.equal(await frame.locator('.example-card').count(),2);assert.ok((await frame.locator('#example-list').innerText()).includes(title));
- assert.ok(await frame.locator('.example-card img').evaluate(async img=>{img.loading="eager";await img.decode();return img.naturalWidth>0;}));assert.equal(await page.evaluate(()=>window.injected),undefined);await page.screenshot({path:join(out,'examples-report.png')});
- const initialReport=join(app.reports,(await readdir(app.reports)).find(n=>n.endsWith('.html')));checks.push('Standalone report shows planned and manual-difference records, decodes the attached PNG and renders hostile-looking titles as inert text');
- const savedPNG=await readFile(join(observedDir,'screenshot.png'));savedPNG[35]^=1;await writeFile(join(observedDir,'screenshot.png'),savedPNG);await page.locator('#run').click();await finished(5);frame=page.frameLocator('#report-frame');await frame.locator('#examples').waitFor();assert.equal(await frame.locator('.example-card').count(),1);assert.match(await frame.locator('#examples-info').innerText(),/Warnings:.*checksum/);checks.push('Modified screenshot bytes are rejected on subsequent report generation and surface an explicit integrity warning');
- const offline=await browser.newPage();offline.on('pageerror',e=>errors.push(e.message));await offline.goto('file://'+initialReport);assert.equal(await offline.locator('.example-card').count(),2);assert.ok(await offline.locator('.example-card img').evaluate(async img=>{img.loading="eager";await img.decode();return img.naturalWidth>0;}));await offline.locator('#examples').screenshot({path:join(out,'observable-examples.png')});await offline.close();checks.push('Previously generated report remains self-contained and readable offline after source attachment changes');
- await page.locator('[data-action="example"]').click();await page.setViewportSize({width:650,height:1000});assert.ok(await page.locator('#example-fields').isVisible());await page.screenshot({path:join(out,'examples-small.png')});const overflow=await page.evaluate(()=>[...document.querySelectorAll('body *')].filter(e=>e.getBoundingClientRect().right>innerWidth+2).slice(0,12).map(e=>({tag:e.tagName,id:e.id,width:e.getBoundingClientRect().width,right:e.getBoundingClientRect().right})));assert.deepEqual(overflow,[]);
- assert.equal(await readFile(join(root,'case.json'),'utf8'),before);assert.deepEqual(errors,[]);assert.ok(requests.every(url=>url.startsWith(app.url+'/')));checks.push('Example form fits narrow screens; original case metadata is unchanged; browser traffic stays local with no JavaScript errors');
- await writeFile(join(out,'VERIFICATION.json'),JSON.stringify({version:'0.10.0',checks,errors,requests,scope:'Browser recording/reporting over a private copy of real MQTT REA Evidence. The attached screenshot depicts the test workbench, not donor behavior. Screenshot corruption is intentional in this test copy. No automated donor/recipient equivalence is claimed.'},null,2)+'\n');console.log('OBSERVABLE EXAMPLE BROWSER CHECKS PASSED:',checks.length);console.log('Evidence:',out);
-}finally{await browser.close();await app.close();}
+import { verificationOutput } from '../general/verification-output.mjs';
+import assert from 'node:assert/strict';
+import { mkdir, cp, readFile, writeFile, readdir } from 'node:fs/promises';
+import { join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { startWorkbench } from '../../src/workbench.js';
+const project = fileURLToPath(new URL('../..', import.meta.url)),
+  source = resolve(
+    process.env.YOINKR_CASE ?? process.env.MODKIT_CASE ?? join(project, 'builds/feature-examples-v0.4/mqtt-case')
+  ),
+  out = await verificationOutput(
+    'acceptance',
+    process.env.YOINKR_EXAMPLES_EVIDENCE ?? process.env.MODKIT_EXAMPLES_EVIDENCE
+  );
+await mkdir(out, { recursive: true });
+const root = join(out, 'case');
+await mkdir(root);
+await cp(join(source, 'evidence'), join(root, 'evidence'), { recursive: true });
+await cp(join(source, 'case.json'), join(root, 'case.json'));
+const before = await readFile(join(root, 'case.json'), 'utf8');
+const app = await startWorkbench({
+    cases: [root],
+    port: 0,
+    reportRoot: join(out, 'reports'),
+    caseRoot: join(out, 'new-cases')
+  }),
+  { chromium } = await import(process.env.PLAYWRIGHT_MODULE ?? 'playwright'),
+  browser = await chromium.launch({ headless: true, args: ['--no-sandbox', '--disable-dev-shm-usage'] });
+const checks = [];
+try {
+  const page = await browser.newPage({ viewport: { width: 1450, height: 1100 } }),
+    errors = [],
+    requests = [];
+  page.on('pageerror', e => errors.push(e.message));
+  page.on('request', r => {
+    if (/^https?:/.test(r.url())) requests.push(r.url());
+  });
+  await page.goto(app.url);
+  await page.locator('#connection').filter({ hasText: 'Local service ready' }).waitFor();
+  await page.locator('[data-action="example"]').click();
+  assert.equal(
+    await page.locator('.tabs button').evaluateAll(buttons => buttons.some(b => b.scrollWidth > b.clientWidth)),
+    false
+  );
+  await page.locator('#example-title').fill('Planned JSON behavior');
+  await page.locator('#example-steps').fill('Select a JSON topic\nChoose formatted view');
+  await page.locator('#example-expected').fill('Indented JSON while retaining the original payload');
+  const finished = async (n, status = 'complete') => {
+    await page.waitForFunction(
+      ({ n, status }) =>
+        document.querySelectorAll('.job').length === n &&
+        document.querySelector('.job strong')?.textContent.includes(status),
+      { n, status },
+      { timeout: 30000 }
+    );
+  };
+  await page.locator('#run').click();
+  await finished(1);
+  assert.match(await page.locator('#result').innerText(), /user-recorded-example/);
+  checks.push('Workbench saves a planned observable example without claiming automated acceptance');
+  const title = '<img src="https://invalid.example/escape" onerror="window.injected=1">';
+  await page.locator('#example-title').fill(title);
+  await page.locator('#example-outcome').selectOption('observed-difference');
+  await page.locator('#run').click();
+  await finished(2, 'failed');
+  assert.match(await page.locator('#result').innerText(), /needs an observation/);
+  assert.equal(await page.locator('#run').isDisabled(), false);
+  checks.push('Observed outcomes require a concrete observation and failed validation releases controls');
+  await page
+    .locator('#example-observation')
+    .fill(
+      'Browser-test recording only: the expected payload view is not present in this workbench screenshot. This is not a donor execution test.'
+    );
+  await page.locator('#example-side').selectOption('recipient');
+  const shot = join(out, 'test-workbench-screen.png');
+  await page.screenshot({ path: shot });
+  await page.locator('#example-screenshot').setInputFiles(shot);
+  await page.locator('#run').click();
+  await finished(3);
+  assert.match(await page.locator('#result').innerText(), /observed-difference/);
+  const dirs = await readdir(join(root, 'examples'));
+  assert.equal(dirs.length, 2);
+  let observedDir;
+  for (const dir of dirs) {
+    const p = join(root, 'examples', dir);
+    const record = JSON.parse(await readFile(join(p, 'example.json'), 'utf8'));
+    if (record.outcome === 'observed-difference') observedDir = p;
+  }
+  assert.ok(observedDir);
+  assert.ok((await readFile(join(observedDir, 'screenshot.png'))).equals(await readFile(shot)));
+  checks.push('PNG screenshot upload retains exact original bytes and binds manual observation metadata to the case');
+  await page.locator('[data-action="report"]').click();
+  await page.locator('#run').click();
+  await finished(4);
+  let frame = page.frameLocator('#report-frame');
+  await frame.locator('#examples').waitFor();
+  assert.equal(await frame.locator('.example-card').count(), 2);
+  assert.ok((await frame.locator('#example-list').innerText()).includes(title));
+  assert.ok(
+    await frame.locator('.example-card img').evaluate(async img => {
+      img.loading = 'eager';
+      await img.decode();
+      return img.naturalWidth > 0;
+    })
+  );
+  assert.equal(await page.evaluate(() => window.injected), undefined);
+  await page.screenshot({ path: join(out, 'examples-report.png') });
+  const initialReport = join(
+    app.reports,
+    (await readdir(app.reports)).find(n => n.endsWith('.html'))
+  );
+  checks.push(
+    'Standalone report shows planned and manual-difference records, decodes the attached PNG and renders hostile-looking titles as inert text'
+  );
+  const savedPNG = await readFile(join(observedDir, 'screenshot.png'));
+  savedPNG[35] ^= 1;
+  await writeFile(join(observedDir, 'screenshot.png'), savedPNG);
+  await page.locator('#run').click();
+  await finished(5);
+  frame = page.frameLocator('#report-frame');
+  await frame.locator('#examples').waitFor();
+  assert.equal(await frame.locator('.example-card').count(), 1);
+  assert.match(await frame.locator('#examples-info').innerText(), /Warnings:.*checksum/);
+  checks.push(
+    'Modified screenshot bytes are rejected on subsequent report generation and surface an explicit integrity warning'
+  );
+  const offline = await browser.newPage();
+  offline.on('pageerror', e => errors.push(e.message));
+  await offline.goto('file://' + initialReport);
+  assert.equal(await offline.locator('.example-card').count(), 2);
+  assert.ok(
+    await offline.locator('.example-card img').evaluate(async img => {
+      img.loading = 'eager';
+      await img.decode();
+      return img.naturalWidth > 0;
+    })
+  );
+  await offline.locator('#examples').screenshot({ path: join(out, 'observable-examples.png') });
+  await offline.close();
+  checks.push(
+    'Previously generated report remains self-contained and readable offline after source attachment changes'
+  );
+  await page.locator('[data-action="example"]').click();
+  await page.setViewportSize({ width: 650, height: 1000 });
+  assert.ok(await page.locator('#example-fields').isVisible());
+  await page.screenshot({ path: join(out, 'examples-small.png') });
+  const overflow = await page.evaluate(() =>
+    [...document.querySelectorAll('body *')]
+      .filter(e => e.getBoundingClientRect().right > innerWidth + 2)
+      .slice(0, 12)
+      .map(e => ({
+        tag: e.tagName,
+        id: e.id,
+        width: e.getBoundingClientRect().width,
+        right: e.getBoundingClientRect().right
+      }))
+  );
+  assert.deepEqual(overflow, []);
+  assert.equal(await readFile(join(root, 'case.json'), 'utf8'), before);
+  assert.deepEqual(errors, []);
+  assert.ok(requests.every(url => url.startsWith(app.url + '/')));
+  checks.push(
+    'Example form fits narrow screens; original case metadata is unchanged; browser traffic stays local with no JavaScript errors'
+  );
+  await writeFile(
+    join(out, 'VERIFICATION.json'),
+    JSON.stringify(
+      {
+        version: '0.10.0',
+        checks,
+        errors,
+        requests,
+        scope:
+          'Browser recording/reporting over a private copy of real MQTT REA Evidence. The attached screenshot depicts the test workbench, not donor behavior. Screenshot corruption is intentional in this test copy. No automated donor/recipient equivalence is claimed.'
+      },
+      null,
+      2
+    ) + '\n'
+  );
+  console.log('OBSERVABLE EXAMPLE BROWSER CHECKS PASSED:', checks.length);
+  console.log('Evidence:', out);
+} finally {
+  await browser.close();
+  await app.close();
+}

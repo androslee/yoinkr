@@ -1,47 +1,306 @@
-import {readFile,mkdir} from 'node:fs/promises';import {join,resolve} from 'node:path';import {fileURLToPath} from 'node:url';import {spawn} from 'node:child_process';
-import {validateSharedSuite,percentile,evaluateLifecycle,checkObservation,differences,normalizeFeatureObservation} from '../../src/feature-verify.js';import {saveJson,sha256} from '../../src/workspace.js';import {originalDonorDriver} from '../../src/feature-drivers/donor.js';import {vscodeFeatureDriver} from '../../src/feature-drivers/vscode.js';import {until,delay} from '../../src/feature-drivers/common.js';
-const f={};for(let i=2;i<process.argv.length;i+=2){if(!['--donor','--recipient','--out','--xvfb'].includes(process.argv[i])||!process.argv[i+1])throw Error('Use --donor <original build> --recipient <adapter> --out <new proof> --xvfb <binary>');f[process.argv[i].slice(2)]=process.argv[i+1]}
-for(const key of ['donor','recipient','out','xvfb'])if(!f[key])throw Error('--'+key+' required');if(!process.env.PLAYWRIGHT_MODULE)throw Error('PLAYWRIGHT_MODULE required');
-const suite=validateSharedSuite(JSON.parse(await readFile(fileURLToPath(new URL('../../recipes/mqtt-shared-acceptance/suite.json',import.meta.url))))),policy=suite.performance,out=resolve(f.out);await mkdir(out,{recursive:false});await saveJson(join(out,'POLICY-BEFORE-RUN.json'),policy);
-let x,display='',driver;const errors=[],startup={pristine:[],adapted:[]},updates={},opens=[],cycles=[],negative=[];let lifecycle,files,moduleOracle;
-const close=async()=>{await driver?.close();driver=null};
-try{
- x=spawn(resolve(f.xvfb),['-displayfd','1','-screen','0','1400x1000x24','-nolisten','tcp','-ac'],{stdio:['ignore','pipe','pipe']});x.stdout.on('data',b=>display+=b);x.stderr.on('data',()=>{});await until(()=>/^\d+\n/.test(display),'owned benchmark display');const playwright=await import(process.env.PLAYWRIGHT_MODULE);
- const config=(name)=>({donorRoot:resolve(f.donor),adapterRoot:resolve(f.recipient),out:join(out,name),display:':'+display.trim(),playwright});
- // Alternating startup order reduces systematic cache/temperature advantage.
- for(let i=0;i<policy.samples;i++)for(const kind of i%2?['adapted','pristine']:['pristine','adapted']){driver=await vscodeFeatureDriver({...config('startup-'+kind+'-'+i),pristine:kind==='pristine',open:false});startup[kind].push(driver.readyMs);await close()}
- const startupCost=percentile(startup.adapted)-percentile(startup.pristine),startupBudget=Math.max(policy.startupOverheadMs,percentile(startup.pristine)*policy.startupOverheadFraction);if(startupCost>startupBudget)errors.push('Unopened recipient startup overhead exceeds frozen budget');
- for(const kind of ['donor','recipient']){
-  driver=await (kind==='donor'?originalDonorDriver(config('updates-donor')):vscodeFeatureDriver(config('updates-recipient')));updates[kind]=[];if(kind==='donor'){moduleOracle=await driver.moduleOracle();if(moduleOracle.some(c=>!c.passed))throw Error('Original formatter module vectors failed');await saveJson(join(out,'MODULE.json'),{schema:1,status:'passed',cases:moduleOracle,scope:'Original Base64Message formatter executed inside its unchanged original app. Shared renderer observations and package hashes are separate outcomes.'})}
-  for(const bytes of (kind==='donor'?policy.sharedCorpusBytes:[...policy.sharedCorpusBytes,policy.recipientOnlyStressBytes]))for(let i=-2;i<policy.samples;i++){
-   const prefix='sample-'+bytes+'-'+i,one=(prefix+'-before-').padEnd(bytes/2-1,'x'),two=(prefix+'-after-').padEnd(bytes/2-1,'y');
-   const before=await driver.metrics(),start=performance.now();await driver.input('perf',[one,two]);await driver.mode('diff');const wallMs=performance.now()-start,after=await driver.metrics(),cpuMs=(after.TaskDuration-before.TaskDuration)*1000;
-   if(!Number.isFinite(cpuMs)||cpuMs<0)throw Error('Nonmonotonic renderer CPU counter');if(i>=0)updates[kind].push({combinedBytes:Buffer.byteLength(one+two),corpusBytes:bytes,cpuMs,wallMs,before,after});
+import { readFile, mkdir } from 'node:fs/promises';
+import { join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { spawn } from 'node:child_process';
+import {
+  validateSharedSuite,
+  percentile,
+  evaluateLifecycle,
+  checkObservation,
+  differences,
+  normalizeFeatureObservation
+} from '../../src/feature-verify.js';
+import { saveJson, sha256 } from '../../src/workspace.js';
+import { originalDonorDriver } from '../../src/feature-drivers/donor.js';
+import { vscodeFeatureDriver } from '../../src/feature-drivers/vscode.js';
+import { until, delay } from '../../src/feature-drivers/common.js';
+const f = {};
+for (let i = 2; i < process.argv.length; i += 2) {
+  if (!['--donor', '--recipient', '--out', '--xvfb'].includes(process.argv[i]) || !process.argv[i + 1])
+    throw Error('Use --donor <original build> --recipient <adapter> --out <new proof> --xvfb <binary>');
+  f[process.argv[i].slice(2)] = process.argv[i + 1];
+}
+for (const key of ['donor', 'recipient', 'out', 'xvfb']) if (!f[key]) throw Error('--' + key + ' required');
+if (!process.env.PLAYWRIGHT_MODULE) throw Error('PLAYWRIGHT_MODULE required');
+const suite = validateSharedSuite(
+    JSON.parse(
+      await readFile(fileURLToPath(new URL('../../recipes/mqtt-shared-acceptance/suite.json', import.meta.url)))
+    )
+  ),
+  policy = suite.performance,
+  out = resolve(f.out);
+await mkdir(out, { recursive: false });
+await saveJson(join(out, 'POLICY-BEFORE-RUN.json'), policy);
+let x,
+  display = '',
+  driver;
+const errors = [],
+  startup = { pristine: [], adapted: [] },
+  updates = {},
+  opens = [],
+  cycles = [],
+  negative = [];
+let lifecycle, files, moduleOracle;
+const close = async () => {
+  await driver?.close();
+  driver = null;
+};
+try {
+  x = spawn(resolve(f.xvfb), ['-displayfd', '1', '-screen', '0', '1400x1000x24', '-nolisten', 'tcp', '-ac'], {
+    stdio: ['ignore', 'pipe', 'pipe']
+  });
+  x.stdout.on('data', b => (display += b));
+  x.stderr.on('data', () => {});
+  await until(() => /^\d+\n/.test(display), 'owned benchmark display');
+  const playwright = await import(process.env.PLAYWRIGHT_MODULE);
+  const config = name => ({
+    donorRoot: resolve(f.donor),
+    adapterRoot: resolve(f.recipient),
+    out: join(out, name),
+    display: ':' + display.trim(),
+    playwright
+  });
+  // Alternating startup order reduces systematic cache/temperature advantage.
+  for (let i = 0; i < policy.samples; i++)
+    for (const kind of i % 2 ? ['adapted', 'pristine'] : ['pristine', 'adapted']) {
+      driver = await vscodeFeatureDriver({
+        ...config('startup-' + kind + '-' + i),
+        pristine: kind === 'pristine',
+        open: false
+      });
+      startup[kind].push(driver.readyMs);
+      await close();
+    }
+  const startupCost = percentile(startup.adapted) - percentile(startup.pristine),
+    startupBudget = Math.max(policy.startupOverheadMs, percentile(startup.pristine) * policy.startupOverheadFraction);
+  if (startupCost > startupBudget) errors.push('Unopened recipient startup overhead exceeds frozen budget');
+  for (const kind of ['donor', 'recipient']) {
+    driver = await (kind === 'donor'
+      ? originalDonorDriver(config('updates-donor'))
+      : vscodeFeatureDriver(config('updates-recipient')));
+    updates[kind] = [];
+    if (kind === 'donor') {
+      moduleOracle = await driver.moduleOracle();
+      if (moduleOracle.some(c => !c.passed)) throw Error('Original formatter module vectors failed');
+      await saveJson(join(out, 'MODULE.json'), {
+        schema: 1,
+        status: 'passed',
+        cases: moduleOracle,
+        scope:
+          'Original Base64Message formatter executed inside its unchanged original app. Shared renderer observations and package hashes are separate outcomes.'
+      });
+    }
+    for (const bytes of kind === 'donor'
+      ? policy.sharedCorpusBytes
+      : [...policy.sharedCorpusBytes, policy.recipientOnlyStressBytes])
+      for (let i = -2; i < policy.samples; i++) {
+        const prefix = 'sample-' + bytes + '-' + i,
+          one = (prefix + '-before-').padEnd(bytes / 2 - 1, 'x'),
+          two = (prefix + '-after-').padEnd(bytes / 2 - 1, 'y');
+        const before = await driver.metrics(),
+          start = performance.now();
+        await driver.input('perf', [one, two]);
+        await driver.mode('diff');
+        const wallMs = performance.now() - start,
+          after = await driver.metrics(),
+          cpuMs = (after.TaskDuration - before.TaskDuration) * 1000;
+        if (!Number.isFinite(cpuMs) || cpuMs < 0) throw Error('Nonmonotonic renderer CPU counter');
+        if (i >= 0)
+          updates[kind].push({
+            combinedBytes: Buffer.byteLength(one + two),
+            corpusBytes: bytes,
+            cpuMs,
+            wallMs,
+            before,
+            after
+          });
+      }
+    await driver.input('file-output', ['file baseline', 'file output Ω\nline two']);
+    if (kind === 'donor') {
+      const target = join(out, 'donor-optional-save.bin');
+      await driver.save(target);
+      await until(async () => {
+        try {
+          return (await readFile(target, 'utf8')) === driver.messages.at(-1);
+        } catch {
+          return false;
+        }
+      }, 'donor saved payload');
+      files = {
+        donor: { status: 'passed', bytes: (await readFile(target)).length, sha256: sha256(await readFile(target)) },
+        copiedSaveCapability: {
+          status: 'excluded',
+          reason: 'Optional donor Save is outside the frozen recipient feature scope.'
+        }
+      };
+    } else {
+      const saved = await driver.saveEditor();
+      files.recipientEditorSave = {
+        status: 'passed',
+        bytes: saved.length,
+        sha256: sha256(saved),
+        scope: 'Actual recipient editor save; separate from the excluded donor Save control.'
+      };
+    }
+    await close();
+    console.log(kind, 'update CPU and transport samples retained');
   }
-  await driver.input('file-output',['file baseline','file output Ω\nline two']);
-  if(kind==='donor'){
-   const target=join(out,'donor-optional-save.bin');await driver.save(target);await until(async()=>{try{return (await readFile(target,'utf8'))===driver.messages.at(-1)}catch{return false}},'donor saved payload');files={donor:{status:'passed',bytes:(await readFile(target)).length,sha256:sha256(await readFile(target))},copiedSaveCapability:{status:'excluded',reason:'Optional donor Save is outside the frozen recipient feature scope.'}};
-  }else{const saved=await driver.saveEditor();files.recipientEditorSave={status:'passed',bytes:saved.length,sha256:sha256(saved),scope:'Actual recipient editor save; separate from the excluded donor Save control.'}}
-  await close();console.log(kind,'update CPU and transport samples retained');
- }
- if(files.donor.sha256!==files.recipientEditorSave.sha256)errors.push('Donor and recipient file bytes differ');
- const updateComparisons=policy.sharedCorpusBytes.map(size=>{const a=percentile(updates.donor.filter(s=>s.corpusBytes===size).map(s=>s.cpuMs)),b=percentile(updates.recipient.filter(s=>s.corpusBytes===size).map(s=>s.cpuMs)),budget=Math.max(policy.rendererCpuOverheadMs,a*policy.rendererCpuOverheadFraction);if(b-a>budget)errors.push('Renderer CPU overhead exceeds budget for '+size);return{corpusBytes:size,donorP95CpuMs:a,recipientP95CpuMs:b,overheadMs:b-a,budgetMs:budget}});
- driver=await vscodeFeatureDriver(config('lifecycle'));await driver.input('lifecycle',['before','after']);await driver.closeTool();
- for(let i=0;i<5;i++){await driver.open();await driver.closeTool()};await delay(300);const before=await driver.mainMetrics();
- for(let i=0;i<policy.lifecycleCycles;i++){
-  opens.push(await driver.open());await driver.page.locator('#valueRendererDisplayMode-'+(i%2?'raw':'diff')).click();await driver.closeTool();await delay(60);cycles.push({index:i,...await driver.mainMetrics()});
- }
- await delay(500);const after=await driver.mainMetrics();lifecycle=evaluateLifecycle(before,after,policy);if(!lifecycle.passed)errors.push(...lifecycle.failures);if(percentile(opens)>policy.warmOpenP95Ms)errors.push('Warm feature open p95 exceeds budget');
- // Actual long-lived main-process subscription fault, then exact cleanup.
- await driver.app.evaluate(({ipcMain})=>ipcMain.on('modkit:acceptance:deliberate-leak',()=>{}));const leaked=await driver.mainMetrics(),leakResult=evaluateLifecycle(after,leaked,policy);negative.push({id:'leaking-subscription',expectedFailure:true,detected:!leakResult.passed&&leakResult.failures.includes('Subscription count grew'),actualCheck:leakResult});await driver.app.evaluate(({ipcMain})=>ipcMain.removeAllListeners('modkit:acceptance:deliberate-leak'));
- await driver.open();await driver.input('faults',['oracle previous','oracle current']);await driver.mode('raw');await driver.showHistory();const state={messages:['oracle previous','oracle current'],mode:'raw'},step={id:'fault'};const good=await driver.observe({}),normalized=normalizeFeatureObservation(good,step);
- // Wrong current output must fail both independent input and oracle comparison checks.
- await driver.page.locator('div[tabindex="0"] > pre').first().locator('span').first().evaluate(e=>e.textContent='BROKEN RECIPIENT OUTPUT');const broken=await driver.observe({}),brokenFailures=checkObservation(broken,state,step),brokenDiff=differences(normalized,normalizeFeatureObservation(broken,step));negative.push({id:'broken-output',expectedFailure:true,detected:brokenFailures.length>0&&brokenDiff.length>0,actualCheck:{status:'failed',failures:brokenFailures,differences:brokenDiff},raw:broken});
- await driver.page.reload();await driver.page.locator('[data-feature]').waitFor();await driver.showHistory();
- await driver.page.evaluate(()=>document.querySelectorAll('style,link[rel="stylesheet"]').forEach(e=>e.remove()));const missing=await driver.observe({}),styleFailures=checkObservation(missing,state,step),styleDiff=differences(normalized,normalizeFeatureObservation(missing,step));negative.push({id:'missing-css',expectedFailure:true,detected:styleFailures.some(s=>s.includes('styles'))&&styleDiff.length>0,actualCheck:{status:'failed',failures:styleFailures,differences:styleDiff},raw:missing});
- await driver.page.reload();await driver.page.locator('[data-feature]').waitFor();const old=await driver.request(driver.page,{type:'ready'});await driver.input('fresh',['new previous','new current']);await driver.mode('raw');const current=await driver.observe({});await driver.app.evaluate(({BrowserWindow},record)=>{BrowserWindow.getAllWindows().find(w=>w.webContents.getURL().endsWith('/modkit-comparison/panel.html')).webContents.send('modkit:comparison:state',record)},old);await delay(100);const stale=await driver.observe({}),staleFailures=checkObservation(stale,{messages:['new previous','new current'],mode:'raw'},step),staleDiff=differences(normalizeFeatureObservation(current,step),normalizeFeatureObservation(stale,step));negative.push({id:'stale-selection',expectedFailure:true,detected:staleFailures.some(s=>s.includes('Current rendered'))&&staleDiff.length>0,actualCheck:{status:'failed',failures:staleFailures,differences:staleDiff},raw:stale});
- if(negative.some(n=>!n.detected))errors.push('One or more deliberate faults escaped acceptance');await close();
- await saveJson(join(out,'PERFORMANCE.json'),{schema:1,policy,startup:{samples:startup,pristineP95Ms:percentile(startup.pristine),adaptedP95Ms:percentile(startup.adapted),overheadMs:startupCost,budgetMs:startupBudget},updates,updateComparisons,warmOpen:{samplesMs:opens,p95Ms:percentile(opens),budgetMs:policy.warmOpenP95Ms},lifecycle,cycles,files});
-}catch(e){errors.push(e.stack??e.message);if(driver?.page)try{await saveJson(join(out,'FAILED-STATE.json'),{messages:driver.messages,raw:await driver.observe({})})}catch{}}finally{await close().catch(e=>errors.push(e.message));if(x&&x.exitCode===null){x.kill('SIGTERM');await new Promise(r=>{x.once('exit',r);setTimeout(()=>{if(x.exitCode===null)x.kill('SIGKILL');r()},2000).unref()})}}
-await saveJson(join(out,'PARTIAL-OBSERVATIONS.json'),{startup,updates,opens,cycles,files:files??null,lifecycle:lifecycle??null});
-for(const test of negative)await saveJson(join(out,test.id+'.expected-failure.json'),test);const result={schema:1,status:errors.length?'failed':'passed',errors,negative:negative.map(n=>({id:n.id,detected:n.detected})),lifecycle,cleanup:{displayExited:!x||x.exitCode!==null||x.signalCode!==null}};await saveJson(join(out,'RESULT.json'),result);console.log(JSON.stringify(result,null,2));if(errors.length)process.exitCode=1;
+  if (files.donor.sha256 !== files.recipientEditorSave.sha256) errors.push('Donor and recipient file bytes differ');
+  const updateComparisons = policy.sharedCorpusBytes.map(size => {
+    const a = percentile(updates.donor.filter(s => s.corpusBytes === size).map(s => s.cpuMs)),
+      b = percentile(updates.recipient.filter(s => s.corpusBytes === size).map(s => s.cpuMs)),
+      budget = Math.max(policy.rendererCpuOverheadMs, a * policy.rendererCpuOverheadFraction);
+    if (b - a > budget) errors.push('Renderer CPU overhead exceeds budget for ' + size);
+    return { corpusBytes: size, donorP95CpuMs: a, recipientP95CpuMs: b, overheadMs: b - a, budgetMs: budget };
+  });
+  driver = await vscodeFeatureDriver(config('lifecycle'));
+  await driver.input('lifecycle', ['before', 'after']);
+  await driver.closeTool();
+  for (let i = 0; i < 5; i++) {
+    await driver.open();
+    await driver.closeTool();
+  }
+  await delay(300);
+  const before = await driver.mainMetrics();
+  for (let i = 0; i < policy.lifecycleCycles; i++) {
+    opens.push(await driver.open());
+    await driver.page.locator('#valueRendererDisplayMode-' + (i % 2 ? 'raw' : 'diff')).click();
+    await driver.closeTool();
+    await delay(60);
+    cycles.push({ index: i, ...(await driver.mainMetrics()) });
+  }
+  await delay(500);
+  const after = await driver.mainMetrics();
+  lifecycle = evaluateLifecycle(before, after, policy);
+  if (!lifecycle.passed) errors.push(...lifecycle.failures);
+  if (percentile(opens) > policy.warmOpenP95Ms) errors.push('Warm feature open p95 exceeds budget');
+  // Actual long-lived main-process subscription fault, then exact cleanup.
+  await driver.app.evaluate(({ ipcMain }) => ipcMain.on('modkit:acceptance:deliberate-leak', () => {}));
+  const leaked = await driver.mainMetrics(),
+    leakResult = evaluateLifecycle(after, leaked, policy);
+  negative.push({
+    id: 'leaking-subscription',
+    expectedFailure: true,
+    detected: !leakResult.passed && leakResult.failures.includes('Subscription count grew'),
+    actualCheck: leakResult
+  });
+  await driver.app.evaluate(({ ipcMain }) => ipcMain.removeAllListeners('modkit:acceptance:deliberate-leak'));
+  await driver.open();
+  await driver.input('faults', ['oracle previous', 'oracle current']);
+  await driver.mode('raw');
+  await driver.showHistory();
+  const state = { messages: ['oracle previous', 'oracle current'], mode: 'raw' },
+    step = { id: 'fault' };
+  const good = await driver.observe({}),
+    normalized = normalizeFeatureObservation(good, step);
+  // Wrong current output must fail both independent input and oracle comparison checks.
+  await driver.page
+    .locator('div[tabindex="0"] > pre')
+    .first()
+    .locator('span')
+    .first()
+    .evaluate(e => (e.textContent = 'BROKEN RECIPIENT OUTPUT'));
+  const broken = await driver.observe({}),
+    brokenFailures = checkObservation(broken, state, step),
+    brokenDiff = differences(normalized, normalizeFeatureObservation(broken, step));
+  negative.push({
+    id: 'broken-output',
+    expectedFailure: true,
+    detected: brokenFailures.length > 0 && brokenDiff.length > 0,
+    actualCheck: { status: 'failed', failures: brokenFailures, differences: brokenDiff },
+    raw: broken
+  });
+  await driver.page.reload();
+  await driver.page.locator('[data-feature]').waitFor();
+  await driver.showHistory();
+  await driver.page.evaluate(() => document.querySelectorAll('style,link[rel="stylesheet"]').forEach(e => e.remove()));
+  const missing = await driver.observe({}),
+    styleFailures = checkObservation(missing, state, step),
+    styleDiff = differences(normalized, normalizeFeatureObservation(missing, step));
+  negative.push({
+    id: 'missing-css',
+    expectedFailure: true,
+    detected: styleFailures.some(s => s.includes('styles')) && styleDiff.length > 0,
+    actualCheck: { status: 'failed', failures: styleFailures, differences: styleDiff },
+    raw: missing
+  });
+  await driver.page.reload();
+  await driver.page.locator('[data-feature]').waitFor();
+  const old = await driver.request(driver.page, { type: 'ready' });
+  await driver.input('fresh', ['new previous', 'new current']);
+  await driver.mode('raw');
+  const current = await driver.observe({});
+  await driver.app.evaluate(({ BrowserWindow }, record) => {
+    BrowserWindow.getAllWindows()
+      .find(w => w.webContents.getURL().endsWith('/modkit-comparison/panel.html'))
+      .webContents.send('modkit:comparison:state', record);
+  }, old);
+  await delay(100);
+  const stale = await driver.observe({}),
+    staleFailures = checkObservation(stale, { messages: ['new previous', 'new current'], mode: 'raw' }, step),
+    staleDiff = differences(normalizeFeatureObservation(current, step), normalizeFeatureObservation(stale, step));
+  negative.push({
+    id: 'stale-selection',
+    expectedFailure: true,
+    detected: staleFailures.some(s => s.includes('Current rendered')) && staleDiff.length > 0,
+    actualCheck: { status: 'failed', failures: staleFailures, differences: staleDiff },
+    raw: stale
+  });
+  if (negative.some(n => !n.detected)) errors.push('One or more deliberate faults escaped acceptance');
+  await close();
+  await saveJson(join(out, 'PERFORMANCE.json'), {
+    schema: 1,
+    policy,
+    startup: {
+      samples: startup,
+      pristineP95Ms: percentile(startup.pristine),
+      adaptedP95Ms: percentile(startup.adapted),
+      overheadMs: startupCost,
+      budgetMs: startupBudget
+    },
+    updates,
+    updateComparisons,
+    warmOpen: { samplesMs: opens, p95Ms: percentile(opens), budgetMs: policy.warmOpenP95Ms },
+    lifecycle,
+    cycles,
+    files
+  });
+} catch (e) {
+  errors.push(e.stack ?? e.message);
+  if (driver?.page)
+    try {
+      await saveJson(join(out, 'FAILED-STATE.json'), { messages: driver.messages, raw: await driver.observe({}) });
+    } catch {}
+} finally {
+  await close().catch(e => errors.push(e.message));
+  if (x && x.exitCode === null) {
+    x.kill('SIGTERM');
+    await new Promise(r => {
+      x.once('exit', r);
+      setTimeout(() => {
+        if (x.exitCode === null) x.kill('SIGKILL');
+        r();
+      }, 2000).unref();
+    });
+  }
+}
+await saveJson(join(out, 'PARTIAL-OBSERVATIONS.json'), {
+  startup,
+  updates,
+  opens,
+  cycles,
+  files: files ?? null,
+  lifecycle: lifecycle ?? null
+});
+for (const test of negative) await saveJson(join(out, test.id + '.expected-failure.json'), test);
+const result = {
+  schema: 1,
+  status: errors.length ? 'failed' : 'passed',
+  errors,
+  negative: negative.map(n => ({ id: n.id, detected: n.detected })),
+  lifecycle,
+  cleanup: { displayExited: !x || x.exitCode !== null || x.signalCode !== null }
+};
+await saveJson(join(out, 'RESULT.json'), result);
+console.log(JSON.stringify(result, null, 2));
+if (errors.length) process.exitCode = 1;
