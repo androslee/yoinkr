@@ -6,9 +6,10 @@ import {readFile,mkdir,writeFile} from 'node:fs/promises';
 import {fileURLToPath} from 'node:url';
 import {join,dirname,resolve} from 'node:path';
 import {createHash} from 'node:crypto';
+import {firefoxExecutable,portableFirefoxDirectory} from './firefox-path.mjs';
 
 const root=dirname(fileURLToPath(import.meta.url));
-const firefox=process.env.YOINKR_FIREFOX||join(root,'.local/firefox',process.platform==='win32'?'firefox.exe':'firefox');
+const firefox=process.env.YOINKR_FIREFOX||firefoxExecutable(portableFirefoxDirectory(join(root,'.local')));
 const geckodriver=process.env.GECKODRIVER;
 if(!geckodriver)throw new Error('Set GECKODRIVER to the absolute path of Mozilla GeckoDriver.');
 const screenTest=process.argv.includes('--screen');

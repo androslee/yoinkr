@@ -3,10 +3,11 @@ import {mkdir,stat,readFile} from 'node:fs/promises';
 import {spawn} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
 import {join,dirname,resolve,sep} from 'node:path';
+import {firefoxExecutable,portableFirefoxDirectory} from './firefox-path.mjs';
 
 const root=dirname(fileURLToPath(import.meta.url));
 const local=join(root,'.local');
-const firefox=process.env.YOINKR_FIREFOX||join(local,'firefox',process.platform==='win32'?'firefox.exe':'firefox');
+const firefox=process.env.YOINKR_FIREFOX||firefoxExecutable(portableFirefoxDirectory(local));
 try{await stat(firefox);await stat(join(local,'demo','extension','manifest.json'));}catch{throw new Error('Build the example with an extracted Firefox directory first; see README.md.');}
 const extension=join(local,'demo','extension');
 const receipt=JSON.parse(await readFile(join(local,'demo','PROVENANCE.json')));

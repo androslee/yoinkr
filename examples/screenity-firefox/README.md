@@ -15,6 +15,8 @@ npm ci --ignore-scripts
 npm run acquire
 # Linux example: copy the installed browser into this lab.
 npm run build -- /usr/lib/firefox
+# macOS example: supply the .app bundle (copied to .local/firefox/Firefox.app).
+# npm run build -- /Applications/Firefox.app
 npm start
 ```
 
@@ -50,7 +52,7 @@ screenity-firefox/
       extension/       # runnable add-on, bundled original modules
       source/          # corresponding donor + host sources
       PROVENANCE.json
-    firefox/           # copied Firefox application
+    firefox/           # copied Firefox application (Firefox.app inside it on macOS)
     profile/           # lab-only profile; never your daily browser profile
     verification/      # generated test receipt/video/screenshot
 ```
