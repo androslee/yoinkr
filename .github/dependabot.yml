@@ -1,0 +1,22 @@
+version: 2
+updates:
+  # Actions are SHA-pinned in the workflows, so without this they would silently rot.
+  # Dependabot reads the `# vX.Y.Z` comment next to each SHA to track releases.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: ci
+
+  # Security updates only. Yoinkr pins exact dependency versions on purpose -- the pinned
+  # REA engine and recorded adapter hashes are part of the verification story, so routine
+  # version bumps would churn that. open-pull-requests-limit: 0 disables version-update
+  # PRs while leaving security-advisory PRs enabled.
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 0
+    commit-message:
+      prefix: deps
