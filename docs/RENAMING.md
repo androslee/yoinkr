@@ -16,6 +16,40 @@ Run from a source checkout with the existing `node src/cli.js ...` and `npm run 
 
 When renaming an existing local checkout, an optional `modkit` → `yoinkr` directory symlink can preserve open IDE tabs and recorded input paths. Fresh clones do not need this alias. Generated client fragments use your current checkout path.
 
+## Workspace metadata is still `.modkit/`
+
+The 0.28.0 rename covered the product name, the npm package and command, the
+`YOINKR_*` settings, the home directory and the MCP fragment. It did **not** cover the
+workspace metadata directory. Integration still creates `.modkit/` inside every new
+workspace -- `workspace.json`, `recipe.json` and the `oracle/` snapshot live there --
+and `validateRecipe` refuses a feature mount that would collide with it.
+
+This is current behavior, not a fallback: there is no `.yoinkr/` workspace equivalent
+to migrate to. It is recorded here because a reader who finds a tool called Yoinkr
+writing `.modkit/` directories has no other way to tell whether that is deliberate.
+
+Renaming it would invalidate existing workspaces, every recorded workspace path and the
+`.modkit` entries that recipient copying and library scanning skip by name. If it is
+ever renamed it should be a single breaking release that reads both names and writes
+only the new one.
+
+## Proposed deprecation horizon
+
+The compatibility shims below have no end date, which makes them permanent by default.
+These are proposals for the maintainer to confirm or change, not decisions:
+
+| Shim | Where | Proposed |
+| --- | --- | --- |
+| `MODKIT_HOME` environment variable | `src/branding.js` | Warn on use in the next minor; remove in 1.0.0 |
+| `~/.modkit` home directory fallback | `src/branding.js` | Keep through 1.0.0 -- it protects real user state and costs one `existsSync` |
+| `MODKIT_VERSION` export | `src/version.js` | Remove in 1.0.0; `YOINKR_VERSION` has been the documented name since 0.28.0 |
+| `MODKIT_*` names in launchers and native profile adapters | launcher and adapter paths | Follow `MODKIT_HOME` |
+| `.modkit/` workspace metadata directory | `src/workspace.js`, `src/library.js` | Not a shim; see the section above |
+| `modkit` -> `yoinkr` checkout symlink | local only, never created automatically | No action; it is a user convenience |
+
+Whatever is chosen, recording it here turns an open-ended compatibility surface into a
+scheduled one.
+
 ## Settings and agent clients
 
 `YOINKR_HOME` takes precedence over `MODKIT_HOME`; an explicit `--home` takes precedence over either. New users default to `~/.yoinkr`. If only `~/.modkit` already exists, Yoinkr uses it so existing mods, pins and disabled-state records remain available. If both directories exist, `~/.yoinkr` wins. No automatic copy or overwrite of settings is performed.
