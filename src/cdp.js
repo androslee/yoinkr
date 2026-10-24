@@ -1,18 +1,31 @@
 // Small bounded CDP client, usable with a real socket or an offline mock.
 export class CdpClient {
   constructor(transport, { timeoutMs = 10_000 } = {}) {
-    this.transport = transport; this.timeoutMs = timeoutMs; this.nextId = 1;
-    this.pending = new Map(); this.listeners = new Map(); this.closed = false;
+    this.transport = transport;
+    this.timeoutMs = timeoutMs;
+    this.nextId = 1;
+    this.pending = new Map();
+    this.listeners = new Map();
+    this.closed = false;
     transport.onMessage(msg => {
-      try { this._handle(msg); } catch (err) { this._failAll(err); }
+      try {
+        this._handle(msg);
+      } catch (err) {
+        this._failAll(err);
+      }
     });
-    transport.onClose?.(() => { this.closed = true; this._failAll(new Error('transport closed')); });
+    transport.onClose?.(() => {
+      this.closed = true;
+      this._failAll(new Error('transport closed'));
+    });
   }
   _handle(raw) {
     const msg = typeof raw === 'string' ? JSON.parse(raw) : raw;
     if (msg.id !== undefined) {
-      const waiter = this.pending.get(msg.id); if (!waiter) return;
-      this.pending.delete(msg.id); clearTimeout(waiter.timer);
+      const waiter = this.pending.get(msg.id);
+      if (!waiter) return;
+      this.pending.delete(msg.id);
+      clearTimeout(waiter.timer);
       if (msg.error) waiter.reject(new Error(`${waiter.method}: ${msg.error.message}`));
       else waiter.resolve(msg.result);
     } else if (msg.method) {
@@ -22,36 +35,66 @@ export class CdpClient {
   }
   on(method, cb) {
     if (!this.listeners.has(method)) this.listeners.set(method, new Set());
-    this.listeners.get(method).add(cb); return () => this.listeners.get(method)?.delete(cb);
+    this.listeners.get(method).add(cb);
+    return () => this.listeners.get(method)?.delete(cb);
   }
   call(method, params = {}, sessionId) {
     if (this.closed) return Promise.reject(new Error('transport closed'));
-    const id = this.nextId++, frame = { id, method, params, ...(sessionId ? { sessionId } : {}) };
+    const id = this.nextId++,
+      frame = { id, method, params, ...(sessionId ? { sessionId } : {}) };
     return new Promise((resolve, reject) => {
-      const timer = setTimeout(() => { this.pending.delete(id); reject(new Error(`${method}: timed out after ${this.timeoutMs}ms`)); }, this.timeoutMs);
+      const timer = setTimeout(() => {
+        this.pending.delete(id);
+        reject(new Error(`${method}: timed out after ${this.timeoutMs}ms`));
+      }, this.timeoutMs);
       this.pending.set(id, { resolve, reject, timer, method });
-      try { this.transport.send(JSON.stringify(frame)); }
-      catch (err) { clearTimeout(timer); this.pending.delete(id); reject(err); }
+      try {
+        this.transport.send(JSON.stringify(frame));
+      } catch (err) {
+        clearTimeout(timer);
+        this.pending.delete(id);
+        reject(err);
+      }
     });
   }
-  async attachToTarget(targetId) { return (await this.call('Target.attachToTarget', { targetId, flatten: true })).sessionId; }
-  async listTargets() { return (await this.call('Target.getTargets')).targetInfos ?? []; }
+  async attachToTarget(targetId) {
+    return (await this.call('Target.attachToTarget', { targetId, flatten: true })).sessionId;
+  }
+  async listTargets() {
+    return (await this.call('Target.getTargets')).targetInfos ?? [];
+  }
   async waitForTarget(predicate, { timeoutMs = 15_000, intervalMs = 250 } = {}) {
     const deadline = Date.now() + timeoutMs;
-    do { const found = (await this.listTargets()).find(predicate); if (found) return found;
-      if (Date.now() >= deadline) break; await new Promise(r => setTimeout(r, intervalMs));
-    } while (true); return null;
+    do {
+      const found = (await this.listTargets()).find(predicate);
+      if (found) return found;
+      if (Date.now() >= deadline) break;
+      await new Promise(r => setTimeout(r, intervalMs));
+    } while (true);
+    return null;
   }
   async addScriptToEvaluateOnNewDocument(source, sessionId) {
     return (await this.call('Page.addScriptToEvaluateOnNewDocument', { source }, sessionId)).identifier;
   }
   async evaluate(expression, sessionId) {
     const res = await this.call('Runtime.evaluate', { expression, awaitPromise: true, returnByValue: true }, sessionId);
-    if (res?.exceptionDetails) throw new Error(`mod threw: ${res.exceptionDetails.exception?.description ?? res.exceptionDetails.text}`);
+    if (res?.exceptionDetails)
+      throw new Error(`mod threw: ${res.exceptionDetails.exception?.description ?? res.exceptionDetails.text}`);
     return res?.result?.value;
   }
-  _failAll(err) { for (const w of this.pending.values()) { clearTimeout(w.timer); w.reject(err); } this.pending.clear(); }
-  close() { this.closed = true; this._failAll(new Error('client closed')); this.listeners.clear(); this.transport.close(); }
+  _failAll(err) {
+    for (const w of this.pending.values()) {
+      clearTimeout(w.timer);
+      w.reject(err);
+    }
+    this.pending.clear();
+  }
+  close() {
+    this.closed = true;
+    this._failAll(new Error('client closed'));
+    this.listeners.clear();
+    this.transport.close();
+  }
 }
 
 // Guard each document against duplicate registration/evaluation races. This is
@@ -66,20 +109,30 @@ export function wrapModSource(modId, source) {
  * Future windows may execute app code before discovery; this is not a preload.
  */
 export async function injectRenderers(cdp, mods, { intervalMs = 250, onError = () => {}, onInjected = () => {} } = {}) {
-  const sessions = new Map(), scripts = [], failed = new Set(); let stopped = false, busy = false;
+  const sessions = new Map(),
+    scripts = [],
+    failed = new Set();
+  let stopped = false,
+    busy = false;
   async function refresh() {
-    if (stopped || busy) return; busy = true;
+    if (stopped || busy) return;
+    busy = true;
     try {
-      const targets = (await cdp.listTargets()).filter(t => t.type === 'page' && !/^(devtools|chrome-devtools):/.test(t.url ?? ''));
+      const targets = (await cdp.listTargets()).filter(
+        t => t.type === 'page' && !/^(devtools|chrome-devtools):/.test(t.url ?? '')
+      );
       const live = new Set(targets.map(t => t.targetId));
-      for (const [id, session] of sessions) if (!live.has(id)) {
-        sessions.delete(id); await cdp.call('Target.detachFromTarget', { sessionId: session }).catch(() => {});
-      }
+      for (const [id, session] of sessions)
+        if (!live.has(id)) {
+          sessions.delete(id);
+          await cdp.call('Target.detachFromTarget', { sessionId: session }).catch(() => {});
+        }
       for (const target of targets) {
         if (stopped || sessions.has(target.targetId) || failed.has(target.targetId)) continue;
         try {
-          const session = await cdp.attachToTarget(target.targetId); sessions.set(target.targetId, session);
-          await cdp.call('Page.enable',{},session);
+          const session = await cdp.attachToTarget(target.targetId);
+          sessions.set(target.targetId, session);
+          await cdp.call('Page.enable', {}, session);
           for (const mod of mods) {
             const source = wrapModSource(mod.id, mod.source);
             const identifier = await cdp.addScriptToEvaluateOnNewDocument(source, session);
@@ -87,17 +140,31 @@ export async function injectRenderers(cdp, mods, { intervalMs = 250, onError = (
             await cdp.evaluate(source, session);
             onInjected(mod.id, target.targetId);
           }
-        } catch (err) { failed.add(target.targetId); onError(err, target.targetId); }
+        } catch (err) {
+          failed.add(target.targetId);
+          onError(err, target.targetId);
+        }
       }
-    } finally { busy = false; }
+    } finally {
+      busy = false;
+    }
   }
   await refresh();
-  const timer = setInterval(() => { refresh().catch(onError); }, intervalMs);
-  return { sessions, scripts, async stop() {
-    stopped = true; clearInterval(timer);
-    // Normal stop follows child exit. These calls also remove future hooks if
-    // the caller disconnects while its fixture/browser remains alive.
-    for (const {identifier,session} of scripts) await cdp.call('Page.removeScriptToEvaluateOnNewDocument', {identifier}, session).catch(() => {});
-    for (const sessionId of sessions.values()) await cdp.call('Target.detachFromTarget',{sessionId}).catch(() => {});
-  } };
+  const timer = setInterval(() => {
+    refresh().catch(onError);
+  }, intervalMs);
+  return {
+    sessions,
+    scripts,
+    async stop() {
+      stopped = true;
+      clearInterval(timer);
+      // Normal stop follows child exit. These calls also remove future hooks if
+      // the caller disconnects while its fixture/browser remains alive.
+      for (const { identifier, session } of scripts)
+        await cdp.call('Page.removeScriptToEvaluateOnNewDocument', { identifier }, session).catch(() => {});
+      for (const sessionId of sessions.values())
+        await cdp.call('Target.detachFromTarget', { sessionId }).catch(() => {});
+    }
+  };
 }

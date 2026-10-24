@@ -1,2 +1,30 @@
-import {buildSourceSlice} from '../../src/feature-slices.js';import {installVsCodeElement} from '../../src/host-adapters/vscode-element.js';import {mkdir} from 'node:fs/promises';import {join} from 'node:path';import {fileURLToPath} from 'node:url';import {newDestination} from '../../src/workspace.js';
-const [source,code,out,...extra]=process.argv.slice(2);if(!out||extra.length)throw Error('Use <acquired Element source> <unmodified VS Code runtime> <new output directory>');const root=await newDestination(out,[source,code]);await mkdir(root,{recursive:true});const feature=await buildSourceSlice('element-search',source,join(root,'feature'));const adapter=await installVsCodeElement(code,feature.root,fileURLToPath(new URL('../../recipes/element-search/vscode.json',import.meta.url)),join(root,'recipient'));console.log(JSON.stringify({feature:feature.root,recipient:adapter.directory,launcher:join(adapter.directory,'launch-code.sh'),scope:'Local transcript search; original Element highlighting core; native application acceptance pending.'},null,2));
+import { buildSourceSlice } from '../../src/feature-slices.js';
+import { installVsCodeElement } from '../../src/host-adapters/vscode-element.js';
+import { mkdir } from 'node:fs/promises';
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { newDestination } from '../../src/workspace.js';
+const [source, code, out, ...extra] = process.argv.slice(2);
+if (!out || extra.length)
+  throw Error('Use <acquired Element source> <unmodified VS Code runtime> <new output directory>');
+const root = await newDestination(out, [source, code]);
+await mkdir(root, { recursive: true });
+const feature = await buildSourceSlice('element-search', source, join(root, 'feature'));
+const adapter = await installVsCodeElement(
+  code,
+  feature.root,
+  fileURLToPath(new URL('../../recipes/element-search/vscode.json', import.meta.url)),
+  join(root, 'recipient')
+);
+console.log(
+  JSON.stringify(
+    {
+      feature: feature.root,
+      recipient: adapter.directory,
+      launcher: join(adapter.directory, 'launch-code.sh'),
+      scope: 'Local transcript search; original Element highlighting core; native application acceptance pending.'
+    },
+    null,
+    2
+  )
+);

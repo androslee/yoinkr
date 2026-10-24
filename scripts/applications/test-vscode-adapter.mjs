@@ -1,76 +1,447 @@
 import assert from 'node:assert/strict';
-import {readFile,writeFile,mkdir,readdir,rm} from 'node:fs/promises';
-import {join,resolve} from 'node:path';
-import {spawn,execFile} from 'node:child_process';
-import {promisify} from 'node:util';
-import {vsCodeAdapterStatus,rollbackVsCodeAdapter} from '../../src/host-adapters/vscode.js';
-import {applyElectronPlaybook,rollbackElectronPlaybook,electronPlaybookStatus} from '../../src/electron-playbook.js';
-import {sha256} from '../../src/workspace.js';
-const flags={};for(let i=2;i<process.argv.length;i+=2){if(!['--adapter','--out','--xvfb'].includes(process.argv[i])||!process.argv[i+1])throw Error('Use --adapter <prepared adapter> --out <new evidence> --xvfb <Xvfb binary>');flags[process.argv[i].slice(2)]=process.argv[i+1];}
-if(!flags.adapter||!flags.out||!flags.xvfb||!process.env.PLAYWRIGHT_MODULE)throw Error('Adapter, output, Xvfb and PLAYWRIGHT_MODULE required');
-const root=resolve(flags.adapter),out=resolve(flags.out);await mkdir(out,{recursive:false});
-const adapter=JSON.parse(await readFile(join(root,'ADAPTER.json'))),initial=await vsCodeAdapterStatus(root);assert.equal(initial.clean,true);
-const {_electron}=await import(process.env.PLAYWRIGHT_MODULE),checks=[],screenshots=[],logs=[],pageErrors=[],processes=[];
-let display,displayText='',application,profile,workbench;
-const wait=async(fn,message,ms=15000)=>{const end=Date.now()+ms;while(!await fn()){if(Date.now()>end)throw Error('Timed out: '+message);await new Promise(r=>setTimeout(r,80))}};
-const check=async(name,fn)=>{await fn();checks.push(name);console.log('PASS',name)};
-const stop=async child=>{if(!child||child.exitCode!==null)return;await new Promise(r=>{child.once('exit',r);child.kill('SIGTERM');const timer=setTimeout(()=>{if(child.exitCode===null)child.kill('SIGKILL');r()},2000);timer.unref()})};
-const fixture=join(out,'sample.json'),old='{"status":"ready","temperature":21}',current='{"status":"running","temperature":24}';await writeFile(fixture,old);
-const environment=()=>{const e=Object.fromEntries(Object.entries(process.env).filter(([k])=>!k.startsWith('VSCODE_')&&!['ELECTRON_RUN_AS_NODE','NODE_OPTIONS','NODE_PATH','XAUTHORITY'].includes(k)));e.DISPLAY=':'+displayText.trim().split('\n')[0];return e};
-async function launch(workspace,suffix){
- profile=join(workspace,'p',suffix);await mkdir(join(profile,'u/User'),{recursive:true});await mkdir(join(profile,'e'),{recursive:true});
- const settings=join(profile,'u/User/settings.json');try{await writeFile(settings,JSON.stringify({'telemetry.telemetryLevel':'off','update.mode':'none','extensions.autoUpdate':false,'extensions.autoCheckUpdates':false,'workbench.enableExperiments':false,'workbench.startupEditor':'none','security.workspace.trust.enabled':false,'window.titleBarStyle':'native','editor.experimentalEditContextEnabled':false,'workbench.colorTheme':'Default Dark Modern'}),{flag:'wx'})}catch(e){if(e.code!=='EEXIST')throw e}
- application=await _electron.launch({executablePath:join(workspace,'runtime/code'),args:['--no-sandbox','--disable-gpu','--disable-dev-shm-usage','--disable-extensions','--skip-welcome','--skip-release-notes','--new-window','--user-data-dir='+join(profile,'u'),'--extensions-dir='+join(profile,'e'),fixture],env:environment(),timeout:45000});
- processes.push({kind:'electron',pid:application.process().pid});application.process().stderr?.on('data',b=>logs.push(b.toString().slice(0,5000)));application.on('window',p=>p.on('pageerror',e=>pageErrors.push({url:p.url(),message:e.message})));
- await wait(()=>application.windows().some(p=>p.url().includes('/workbench.html')),'VS Code workbench',45000);workbench=application.windows().find(p=>p.url().includes('/workbench.html'));await workbench.locator('.monaco-editor').first().waitFor({timeout:45000});return workbench;
+import { readFile, writeFile, mkdir, readdir, rm } from 'node:fs/promises';
+import { join, resolve } from 'node:path';
+import { spawn, execFile } from 'node:child_process';
+import { promisify } from 'node:util';
+import { vsCodeAdapterStatus, rollbackVsCodeAdapter } from '../../src/host-adapters/vscode.js';
+import {
+  applyElectronPlaybook,
+  rollbackElectronPlaybook,
+  electronPlaybookStatus
+} from '../../src/electron-playbook.js';
+import { sha256 } from '../../src/workspace.js';
+const flags = {};
+for (let i = 2; i < process.argv.length; i += 2) {
+  if (!['--adapter', '--out', '--xvfb'].includes(process.argv[i]) || !process.argv[i + 1])
+    throw Error('Use --adapter <prepared adapter> --out <new evidence> --xvfb <Xvfb binary>');
+  flags[process.argv[i].slice(2)] = process.argv[i + 1];
 }
-async function menu(id){await application.evaluate(({Menu},itemId)=>{const item=Menu.getApplicationMenu()?.getMenuItemById(itemId);if(!item)throw Error('Missing native menu '+itemId);item.click()},id)}
-async function tool(){await wait(()=>application.windows().some(p=>p.url().endsWith('/modkit-comparison/panel.html')),'comparison window');const page=application.windows().find(p=>p.url().endsWith('/modkit-comparison/panel.html'));await page.locator('[data-feature]').waitFor();return page}
-const request=(page,message)=>page.evaluate(m=>window.modkitComparison.request(m),message);
-async function selectEditor(text){await application.evaluate(({BrowserWindow})=>{const w=BrowserWindow.getAllWindows().find(w=>w.webContents.getURL().includes('/workbench.html'));w.show();w.focus()});await workbench.bringToFront();await wait(()=>workbench.evaluate(()=>document.hasFocus()),'native editor focus');await workbench.locator('.monaco-editor .view-lines').first().click({position:{x:50,y:12}});await workbench.keyboard.press('Control+a');if(text!==undefined){await application.evaluate(({clipboard},value)=>clipboard.writeText(value),text);await workbench.keyboard.press('Control+v');await wait(async()=>((await workbench.locator('.monaco-editor .view-lines').first().innerText()).includes(text)),'pasted editor content');await workbench.keyboard.press('Control+a')}}
-async function close(){if(application){await application.close();application=null}}
-async function shot(page,name){await page.screenshot({path:join(out,name+'.png'),fullPage:true});screenshots.push(name+'.png')}
-let failure,health;
-try{
- display=spawn(resolve(flags.xvfb),['-displayfd','1','-screen','0','1400x1000x24','-nolisten','tcp','-ac'],{stdio:['ignore','pipe','pipe']});display.stdout.on('data',b=>displayText+=b);display.stderr.on('data',b=>logs.push(b.toString()));display.on('error',e=>logs.push(e.message));await wait(()=>/^\d+\n/.test(displayText),'owned Xvfb',5000);processes.push({kind:'Xvfb',pid:display.pid});
- await rm(join(root,'workspace/p/t'),{recursive:true,force:true});await launch(join(root,'workspace'),'t');
- await check('Actual fresh VS Code workbench opens with extensions disabled',async()=>{assert.match(workbench.url(),/workbench.html/);assert.ok(application.process().spawnargs.includes('--disable-extensions'));assert.deepEqual((await readdir(join(profile,'e'),{withFileTypes:true})).filter(n=>n.isDirectory()),[]);assert.deepEqual(JSON.parse(await readFile(join(profile,'e/extensions.json'))),[])});
- await selectEditor();await menu('modkit-comparison-baseline');let page=await tool();
- await check('Native menu captures actual editor-model selection',async()=>{const record=await request(page,{type:'ready'});assert.equal(record.state.baseline.text,old);assert.match(record.state.baseline.uri,/sample.json/);assert.equal(record.featureDigest,adapter.featureDigest)});
- await selectEditor(current);await menu('modkit-comparison-current');
- await check('Unsaved editor content enters original donor comparison UI',async()=>{await wait(async()=>((await request(page,{type:'ready'})).state.current?.text===current),'unsaved selection');const text=await page.getByTestId('comparison').innerText();assert.match(text,/ready/);assert.match(text,/running/);assert.match(text,/Comparing with previous/);assert.equal(await readFile(fixture,'utf8'),old);assert.ok(await page.locator('.token.property').count()>0)});
- health=await request(page,{type:'health'});
- await check('Feature digest stays frozen and native menu is application-owned',async()=>{assert.equal(health.featureDigest,adapter.featureDigest);assert.equal(health.hostVersion,adapter.identity.version);assert.equal(health.nativeMenu,true);assert.equal(health.extensionsUsed,false);assert.equal(health.pendingRequests,0)});
- await check('Feature renderer is sandboxed without Node or extension APIs',async()=>assert.deepEqual(await page.evaluate(()=>({require:typeof require,extension:typeof acquireVsCodeApi})),{require:'undefined',extension:'undefined'}));
- await page.locator('#valueRendererDisplayMode-raw').click();
- await check('Original mode control persists through adapter settings',async()=>wait(async()=>((await request(page,{type:'ready'})).state.mode==='raw'),'persisted raw mode'));
- await page.getByRole('button',{name:'Copy payload',exact:true}).click();
- await check('Original comparison copy reaches real Electron clipboard',async()=>wait(async()=>await application.evaluate(({clipboard})=>clipboard.readText())===current,'clipboard output'));
- await shot(page,'native-comparison');await shot(workbench,'native-editor');
- for(const [name,message,pattern] of [['Unknown operation',{type:'execute'},/Unsupported/],['Oversized clipboard',{type:'copy',text:'x'.repeat(131073)},/limit/],['Invalid settings',{type:'preferences',mode:'invalid',selected:0},/Invalid/]])await check(name+' refused',async()=>{let error;try{await request(page,message)}catch(e){error=e.message}assert.match(error??'',pattern)});
- const probeURL=page.url()+'?untrusted-probe=1';
- await application.evaluate(({BrowserWindow},options)=>{const w=globalThis.__modkitForeignProbe=new BrowserWindow({show:true,webPreferences:{preload:options.preload,nodeIntegration:false,contextIsolation:true,sandbox:true,partition:'modkit-comparison-v1'}});w.loadURL(options.url)},{preload:join(root,'workspace/runtime/resources/app/modkit-comparison/preload.cjs'),url:probeURL});
- await wait(()=>application.windows().some(p=>p.url()===probeURL),'foreign window probe');const foreign=application.windows().find(p=>p.url()===probeURL);await foreign.waitForFunction(()=>!!window.modkitComparison);
- await check('Foreign renderer cannot call the feature IPC capability',async()=>{let error;try{await request(foreign,{type:'health'})}catch(e){error=e.message}assert.match(error??'',/Untrusted comparison sender/)});await foreign.close();
- const settingsPath=join(profile,'u/User/settings.json'),settings=JSON.parse(await readFile(settingsPath));await writeFile(settingsPath,JSON.stringify({...settings,'workbench.colorTheme':'Default Light Modern'}));
- await check('Actual VS Code theme change updates recovered component',async()=>{await wait(async()=>((await request(page,{type:'ready'})).state.theme==='light'),'light theme',20000);assert.equal(await page.locator('[data-feature]').evaluate(e=>getComputedStyle(e).backgroundColor),'rgb(250, 250, 250)')});await shot(page,'native-light-theme');
- for(let i=0;i<3;i++){await page.close();await wait(async()=>await application.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows().every(w=>!w.webContents.getURL().endsWith('/modkit-comparison/panel.html'))),'tool close');await menu('modkit-comparison-open');page=await tool()}
- await check('Close/reopen preserves data with only one tool window',async()=>{const r=await request(page,{type:'ready'});assert.equal(r.state.current.text,current);assert.equal(r.state.mode,'raw');assert.equal((await request(page,{type:'health'})).toolWindows,1)});
- await selectEditor('{"ordinaryEditorStillWorks":true}');await workbench.keyboard.press('Control+s');
- await check('Ordinary editing and saving still work',async()=>wait(async()=>await readFile(fixture,'utf8')==='{"ordinaryEditorStillWorks":true}','saved editor content'));
- const sessionFile=join(profile,'u/YoinkrComparison/session.json');await wait(async()=>{try{return JSON.parse(await readFile(sessionFile)).mode==='raw'}catch{return false}},'session persisted');await close();
- await launch(join(root,'workspace'),'t');await menu('modkit-comparison-open');page=await tool();
- await check('Application restart restores isolated feature session',async()=>{const r=await request(page,{type:'ready'});assert.equal(r.state.baseline.text,old);assert.equal(r.state.current.text,current);assert.equal(r.state.mode,'raw')});await shot(page,'native-restored-session');await page.locator('#reset').click();await check('Clear comparison removes persisted selections',async()=>wait(async()=>{const r=await request(page,{type:'ready'});return r.state.baseline===null&&r.state.current===null},'cleared comparison'));await close();
- const driftFile=join(root,'workspace/runtime/resources/app/product.json'),originalProduct=await readFile(driftFile);try{await writeFile(driftFile,'{}');await check('Changed recipient runtime is refused before activation',async()=>{assert.equal((await vsCodeAdapterStatus(root)).clean,false);let error;try{await promisify(execFile)(process.execPath,[join(root,'launch.mjs'),join(root,'workspace'),'--no-sandbox'],{timeout:5000,env:environment()})}catch(e){error=e.stderr??e.message}assert.match(error??'',/drift|activation refused/)});}finally{await writeFile(driftFile,originalProduct)}
+if (!flags.adapter || !flags.out || !flags.xvfb || !process.env.PLAYWRIGHT_MODULE)
+  throw Error('Adapter, output, Xvfb and PLAYWRIGHT_MODULE required');
+const root = resolve(flags.adapter),
+  out = resolve(flags.out);
+await mkdir(out, { recursive: false });
+const adapter = JSON.parse(await readFile(join(root, 'ADAPTER.json'))),
+  initial = await vsCodeAdapterStatus(root);
+assert.equal(initial.clean, true);
+const { _electron } = await import(process.env.PLAYWRIGHT_MODULE),
+  checks = [],
+  screenshots = [],
+  logs = [],
+  pageErrors = [],
+  processes = [];
+let display,
+  displayText = '',
+  application,
+  profile,
+  workbench;
+const wait = async (fn, message, ms = 15000) => {
+  const end = Date.now() + ms;
+  while (!(await fn())) {
+    if (Date.now() > end) throw Error('Timed out: ' + message);
+    await new Promise(r => setTimeout(r, 80));
+  }
+};
+const check = async (name, fn) => {
+  await fn();
+  checks.push(name);
+  console.log('PASS', name);
+};
+const stop = async child => {
+  if (!child || child.exitCode !== null) return;
+  await new Promise(r => {
+    child.once('exit', r);
+    child.kill('SIGTERM');
+    const timer = setTimeout(() => {
+      if (child.exitCode === null) child.kill('SIGKILL');
+      r();
+    }, 2000);
+    timer.unref();
+  });
+};
+const fixture = join(out, 'sample.json'),
+  old = '{"status":"ready","temperature":21}',
+  current = '{"status":"running","temperature":24}';
+await writeFile(fixture, old);
+const environment = () => {
+  const e = Object.fromEntries(
+    Object.entries(process.env).filter(
+      ([k]) =>
+        !k.startsWith('VSCODE_') && !['ELECTRON_RUN_AS_NODE', 'NODE_OPTIONS', 'NODE_PATH', 'XAUTHORITY'].includes(k)
+    )
+  );
+  e.DISPLAY = ':' + displayText.trim().split('\n')[0];
+  return e;
+};
+async function launch(workspace, suffix) {
+  profile = join(workspace, 'p', suffix);
+  await mkdir(join(profile, 'u/User'), { recursive: true });
+  await mkdir(join(profile, 'e'), { recursive: true });
+  const settings = join(profile, 'u/User/settings.json');
+  try {
+    await writeFile(
+      settings,
+      JSON.stringify({
+        'telemetry.telemetryLevel': 'off',
+        'update.mode': 'none',
+        'extensions.autoUpdate': false,
+        'extensions.autoCheckUpdates': false,
+        'workbench.enableExperiments': false,
+        'workbench.startupEditor': 'none',
+        'security.workspace.trust.enabled': false,
+        'window.titleBarStyle': 'native',
+        'editor.experimentalEditContextEnabled': false,
+        'workbench.colorTheme': 'Default Dark Modern'
+      }),
+      { flag: 'wx' }
+    );
+  } catch (e) {
+    if (e.code !== 'EEXIST') throw e;
+  }
+  application = await _electron.launch({
+    executablePath: join(workspace, 'runtime/code'),
+    args: [
+      '--no-sandbox',
+      '--disable-gpu',
+      '--disable-dev-shm-usage',
+      '--disable-extensions',
+      '--skip-welcome',
+      '--skip-release-notes',
+      '--new-window',
+      '--user-data-dir=' + join(profile, 'u'),
+      '--extensions-dir=' + join(profile, 'e'),
+      fixture
+    ],
+    env: environment(),
+    timeout: 45000
+  });
+  processes.push({ kind: 'electron', pid: application.process().pid });
+  application.process().stderr?.on('data', b => logs.push(b.toString().slice(0, 5000)));
+  application.on('window', p => p.on('pageerror', e => pageErrors.push({ url: p.url(), message: e.message })));
+  await wait(() => application.windows().some(p => p.url().includes('/workbench.html')), 'VS Code workbench', 45000);
+  workbench = application.windows().find(p => p.url().includes('/workbench.html'));
+  await workbench.locator('.monaco-editor').first().waitFor({ timeout: 45000 });
+  return workbench;
+}
+async function menu(id) {
+  await application.evaluate(({ Menu }, itemId) => {
+    const item = Menu.getApplicationMenu()?.getMenuItemById(itemId);
+    if (!item) throw Error('Missing native menu ' + itemId);
+    item.click();
+  }, id);
+}
+async function tool() {
+  await wait(
+    () => application.windows().some(p => p.url().endsWith('/modkit-comparison/panel.html')),
+    'comparison window'
+  );
+  const page = application.windows().find(p => p.url().endsWith('/modkit-comparison/panel.html'));
+  await page.locator('[data-feature]').waitFor();
+  return page;
+}
+const request = (page, message) => page.evaluate(m => window.modkitComparison.request(m), message);
+async function selectEditor(text) {
+  await application.evaluate(({ BrowserWindow }) => {
+    const w = BrowserWindow.getAllWindows().find(w => w.webContents.getURL().includes('/workbench.html'));
+    w.show();
+    w.focus();
+  });
+  await workbench.bringToFront();
+  await wait(() => workbench.evaluate(() => document.hasFocus()), 'native editor focus');
+  await workbench
+    .locator('.monaco-editor .view-lines')
+    .first()
+    .click({ position: { x: 50, y: 12 } });
+  await workbench.keyboard.press('Control+a');
+  if (text !== undefined) {
+    await application.evaluate(({ clipboard }, value) => clipboard.writeText(value), text);
+    await workbench.keyboard.press('Control+v');
+    await wait(
+      async () => (await workbench.locator('.monaco-editor .view-lines').first().innerText()).includes(text),
+      'pasted editor content'
+    );
+    await workbench.keyboard.press('Control+a');
+  }
+}
+async function close() {
+  if (application) {
+    await application.close();
+    application = null;
+  }
+}
+async function shot(page, name) {
+  await page.screenshot({ path: join(out, name + '.png'), fullPage: true });
+  screenshots.push(name + '.png');
+}
+let failure, health;
+try {
+  display = spawn(resolve(flags.xvfb), ['-displayfd', '1', '-screen', '0', '1400x1000x24', '-nolisten', 'tcp', '-ac'], {
+    stdio: ['ignore', 'pipe', 'pipe']
+  });
+  display.stdout.on('data', b => (displayText += b));
+  display.stderr.on('data', b => logs.push(b.toString()));
+  display.on('error', e => logs.push(e.message));
+  await wait(() => /^\d+\n/.test(displayText), 'owned Xvfb', 5000);
+  processes.push({ kind: 'Xvfb', pid: display.pid });
+  await rm(join(root, 'workspace/p/t'), { recursive: true, force: true });
+  await launch(join(root, 'workspace'), 't');
+  await check('Actual fresh VS Code workbench opens with extensions disabled', async () => {
+    assert.match(workbench.url(), /workbench.html/);
+    assert.ok(application.process().spawnargs.includes('--disable-extensions'));
+    assert.deepEqual(
+      (await readdir(join(profile, 'e'), { withFileTypes: true })).filter(n => n.isDirectory()),
+      []
+    );
+    assert.deepEqual(JSON.parse(await readFile(join(profile, 'e/extensions.json'))), []);
+  });
+  await selectEditor();
+  await menu('modkit-comparison-baseline');
+  let page = await tool();
+  await check('Native menu captures actual editor-model selection', async () => {
+    const record = await request(page, { type: 'ready' });
+    assert.equal(record.state.baseline.text, old);
+    assert.match(record.state.baseline.uri, /sample.json/);
+    assert.equal(record.featureDigest, adapter.featureDigest);
+  });
+  await selectEditor(current);
+  await menu('modkit-comparison-current');
+  await check('Unsaved editor content enters original donor comparison UI', async () => {
+    await wait(
+      async () => (await request(page, { type: 'ready' })).state.current?.text === current,
+      'unsaved selection'
+    );
+    const text = await page.getByTestId('comparison').innerText();
+    assert.match(text, /ready/);
+    assert.match(text, /running/);
+    assert.match(text, /Comparing with previous/);
+    assert.equal(await readFile(fixture, 'utf8'), old);
+    assert.ok((await page.locator('.token.property').count()) > 0);
+  });
+  health = await request(page, { type: 'health' });
+  await check('Feature digest stays frozen and native menu is application-owned', async () => {
+    assert.equal(health.featureDigest, adapter.featureDigest);
+    assert.equal(health.hostVersion, adapter.identity.version);
+    assert.equal(health.nativeMenu, true);
+    assert.equal(health.extensionsUsed, false);
+    assert.equal(health.pendingRequests, 0);
+  });
+  await check('Feature renderer is sandboxed without Node or extension APIs', async () =>
+    assert.deepEqual(await page.evaluate(() => ({ require: typeof require, extension: typeof acquireVsCodeApi })), {
+      require: 'undefined',
+      extension: 'undefined'
+    })
+  );
+  await page.locator('#valueRendererDisplayMode-raw').click();
+  await check('Original mode control persists through adapter settings', async () =>
+    wait(async () => (await request(page, { type: 'ready' })).state.mode === 'raw', 'persisted raw mode')
+  );
+  await page.getByRole('button', { name: 'Copy payload', exact: true }).click();
+  await check('Original comparison copy reaches real Electron clipboard', async () =>
+    wait(
+      async () => (await application.evaluate(({ clipboard }) => clipboard.readText())) === current,
+      'clipboard output'
+    )
+  );
+  await shot(page, 'native-comparison');
+  await shot(workbench, 'native-editor');
+  for (const [name, message, pattern] of [
+    ['Unknown operation', { type: 'execute' }, /Unsupported/],
+    ['Oversized clipboard', { type: 'copy', text: 'x'.repeat(131073) }, /limit/],
+    ['Invalid settings', { type: 'preferences', mode: 'invalid', selected: 0 }, /Invalid/]
+  ])
+    await check(name + ' refused', async () => {
+      let error;
+      try {
+        await request(page, message);
+      } catch (e) {
+        error = e.message;
+      }
+      assert.match(error ?? '', pattern);
+    });
+  const probeURL = page.url() + '?untrusted-probe=1';
+  await application.evaluate(
+    ({ BrowserWindow }, options) => {
+      const w = (globalThis.__modkitForeignProbe = new BrowserWindow({
+        show: true,
+        webPreferences: {
+          preload: options.preload,
+          nodeIntegration: false,
+          contextIsolation: true,
+          sandbox: true,
+          partition: 'modkit-comparison-v1'
+        }
+      }));
+      w.loadURL(options.url);
+    },
+    { preload: join(root, 'workspace/runtime/resources/app/modkit-comparison/preload.cjs'), url: probeURL }
+  );
+  await wait(() => application.windows().some(p => p.url() === probeURL), 'foreign window probe');
+  const foreign = application.windows().find(p => p.url() === probeURL);
+  await foreign.waitForFunction(() => !!window.modkitComparison);
+  await check('Foreign renderer cannot call the feature IPC capability', async () => {
+    let error;
+    try {
+      await request(foreign, { type: 'health' });
+    } catch (e) {
+      error = e.message;
+    }
+    assert.match(error ?? '', /Untrusted comparison sender/);
+  });
+  await foreign.close();
+  const settingsPath = join(profile, 'u/User/settings.json'),
+    settings = JSON.parse(await readFile(settingsPath));
+  await writeFile(settingsPath, JSON.stringify({ ...settings, 'workbench.colorTheme': 'Default Light Modern' }));
+  await check('Actual VS Code theme change updates recovered component', async () => {
+    await wait(async () => (await request(page, { type: 'ready' })).state.theme === 'light', 'light theme', 20000);
+    assert.equal(
+      await page.locator('[data-feature]').evaluate(e => getComputedStyle(e).backgroundColor),
+      'rgb(250, 250, 250)'
+    );
+  });
+  await shot(page, 'native-light-theme');
+  for (let i = 0; i < 3; i++) {
+    await page.close();
+    await wait(
+      async () =>
+        await application.evaluate(({ BrowserWindow }) =>
+          BrowserWindow.getAllWindows().every(w => !w.webContents.getURL().endsWith('/modkit-comparison/panel.html'))
+        ),
+      'tool close'
+    );
+    await menu('modkit-comparison-open');
+    page = await tool();
+  }
+  await check('Close/reopen preserves data with only one tool window', async () => {
+    const r = await request(page, { type: 'ready' });
+    assert.equal(r.state.current.text, current);
+    assert.equal(r.state.mode, 'raw');
+    assert.equal((await request(page, { type: 'health' })).toolWindows, 1);
+  });
+  await selectEditor('{"ordinaryEditorStillWorks":true}');
+  await workbench.keyboard.press('Control+s');
+  await check('Ordinary editing and saving still work', async () =>
+    wait(async () => (await readFile(fixture, 'utf8')) === '{"ordinaryEditorStillWorks":true}', 'saved editor content')
+  );
+  const sessionFile = join(profile, 'u/YoinkrComparison/session.json');
+  await wait(async () => {
+    try {
+      return JSON.parse(await readFile(sessionFile)).mode === 'raw';
+    } catch {
+      return false;
+    }
+  }, 'session persisted');
+  await close();
+  await launch(join(root, 'workspace'), 't');
+  await menu('modkit-comparison-open');
+  page = await tool();
+  await check('Application restart restores isolated feature session', async () => {
+    const r = await request(page, { type: 'ready' });
+    assert.equal(r.state.baseline.text, old);
+    assert.equal(r.state.current.text, current);
+    assert.equal(r.state.mode, 'raw');
+  });
+  await shot(page, 'native-restored-session');
+  await page.locator('#reset').click();
+  await check('Clear comparison removes persisted selections', async () =>
+    wait(async () => {
+      const r = await request(page, { type: 'ready' });
+      return r.state.baseline === null && r.state.current === null;
+    }, 'cleared comparison')
+  );
+  await close();
+  const driftFile = join(root, 'workspace/runtime/resources/app/product.json'),
+    originalProduct = await readFile(driftFile);
+  try {
+    await writeFile(driftFile, '{}');
+    await check('Changed recipient runtime is refused before activation', async () => {
+      assert.equal((await vsCodeAdapterStatus(root)).clean, false);
+      let error;
+      try {
+        await promisify(execFile)(
+          process.execPath,
+          [join(root, 'launch.mjs'), join(root, 'workspace'), '--no-sandbox'],
+          { timeout: 5000, env: environment() }
+        );
+      } catch (e) {
+        error = e.stderr ?? e.message;
+      }
+      assert.match(error ?? '', /drift|activation refused/);
+    });
+  } finally {
+    await writeFile(driftFile, originalProduct);
+  }
 
- await check('Primary prepared copy remains clean and reviewable',async()=>assert.equal((await vsCodeAdapterStatus(root)).clean,true));
- const rollback=join(root,'rollback-workspace');await applyElectronPlaybook(adapter.source,join(root,'playbook/playbook.json'),rollback);await mkdir(join(rollback,'p/r/u'),{recursive:true});await writeFile(join(rollback,'p/r/u/keep.txt'),'preserve lab profile');
- const before=await electronPlaybookStatus(rollback);await check('Rollback preview is read-only',async()=>{assert.equal((await rollbackElectronPlaybook(rollback,{dryRun:true})).status,'rollback-ready');assert.deepEqual(await electronPlaybookStatus(rollback),before)});
- await rollbackElectronPlaybook(rollback);
- await check('Rollback restores original package/workbench and preserves lab profile',async()=>{assert.equal((await electronPlaybookStatus(rollback)).clean,true);assert.equal(await readFile(join(rollback,'p/r/u/keep.txt'),'utf8'),'preserve lab profile');assert.equal(await readFile(join(rollback,'runtime/resources/app/out/vs/workbench/workbench.desktop.main.js'),'utf8'),await readFile(join(adapter.source,'resources/app/out/vs/workbench/workbench.desktop.main.js'),'utf8'))});
- await launch(rollback,'r');
- await check('Rolled-back real app launches without adapter menu or feature window',async()=>{assert.equal(await application.evaluate(({Menu})=>!!Menu.getApplicationMenu()?.getMenuItemById('modkit-comparison-menu')),false);assert.equal(application.windows().some(p=>p.url().includes('/modkit-comparison/')),false);assert.ok(await workbench.locator('.monaco-editor').count()>0)});await shot(workbench,'rolled-back-editor');await close();
- await check('Original recipient fingerprint files remain unchanged',async()=>{for(const f of adapter.identity.files)assert.equal(sha256(await readFile(join(adapter.source,f.path))),f.sha256)});
- await check('Feature windows had no page runtime errors',async()=>assert.deepEqual(pageErrors.filter(e=>e.url.includes('/modkit-comparison/')),[]));
-}catch(e){failure={message:e.message,stack:e.stack};for(const [i,p] of (application?.windows()??[]).entries())await shot(p,'failure-'+i).catch(()=>{});console.error(e.stack)}finally{await close().catch(e=>logs.push('Close failed: '+e.message));await stop(display);await writeFile(join(out,'native.log'),logs.join('\n'));}
-const result={schema:1,status:failure?'failed':'passed',adapter:adapter.adapter,featureDigest:adapter.featureDigest,checks,checksPassed:checks.length,screenshots,health,pageErrors,processes,failure,scope:'Actual copied VS Code '+adapter.identity.version+' on Linux x86-64; native menu and editor-model input, no extension. Shared donor comparison is recorded separately.'};await writeFile(join(out,'RESULT.json'),JSON.stringify(result,null,2)+'\n',{flag:'wx'});console.log(JSON.stringify({status:result.status,checks:checks.length,out}));if(failure)process.exitCode=1;
+  await check('Primary prepared copy remains clean and reviewable', async () =>
+    assert.equal((await vsCodeAdapterStatus(root)).clean, true)
+  );
+  const rollback = join(root, 'rollback-workspace');
+  await applyElectronPlaybook(adapter.source, join(root, 'playbook/playbook.json'), rollback);
+  await mkdir(join(rollback, 'p/r/u'), { recursive: true });
+  await writeFile(join(rollback, 'p/r/u/keep.txt'), 'preserve lab profile');
+  const before = await electronPlaybookStatus(rollback);
+  await check('Rollback preview is read-only', async () => {
+    assert.equal((await rollbackElectronPlaybook(rollback, { dryRun: true })).status, 'rollback-ready');
+    assert.deepEqual(await electronPlaybookStatus(rollback), before);
+  });
+  await rollbackElectronPlaybook(rollback);
+  await check('Rollback restores original package/workbench and preserves lab profile', async () => {
+    assert.equal((await electronPlaybookStatus(rollback)).clean, true);
+    assert.equal(await readFile(join(rollback, 'p/r/u/keep.txt'), 'utf8'), 'preserve lab profile');
+    assert.equal(
+      await readFile(join(rollback, 'runtime/resources/app/out/vs/workbench/workbench.desktop.main.js'), 'utf8'),
+      await readFile(join(adapter.source, 'resources/app/out/vs/workbench/workbench.desktop.main.js'), 'utf8')
+    );
+  });
+  await launch(rollback, 'r');
+  await check('Rolled-back real app launches without adapter menu or feature window', async () => {
+    assert.equal(
+      await application.evaluate(({ Menu }) => !!Menu.getApplicationMenu()?.getMenuItemById('modkit-comparison-menu')),
+      false
+    );
+    assert.equal(
+      application.windows().some(p => p.url().includes('/modkit-comparison/')),
+      false
+    );
+    assert.ok((await workbench.locator('.monaco-editor').count()) > 0);
+  });
+  await shot(workbench, 'rolled-back-editor');
+  await close();
+  await check('Original recipient fingerprint files remain unchanged', async () => {
+    for (const f of adapter.identity.files)
+      assert.equal(sha256(await readFile(join(adapter.source, f.path))), f.sha256);
+  });
+  await check('Feature windows had no page runtime errors', async () =>
+    assert.deepEqual(
+      pageErrors.filter(e => e.url.includes('/modkit-comparison/')),
+      []
+    )
+  );
+} catch (e) {
+  failure = { message: e.message, stack: e.stack };
+  for (const [i, p] of (application?.windows() ?? []).entries()) await shot(p, 'failure-' + i).catch(() => {});
+  console.error(e.stack);
+} finally {
+  await close().catch(e => logs.push('Close failed: ' + e.message));
+  await stop(display);
+  await writeFile(join(out, 'native.log'), logs.join('\n'));
+}
+const result = {
+  schema: 1,
+  status: failure ? 'failed' : 'passed',
+  adapter: adapter.adapter,
+  featureDigest: adapter.featureDigest,
+  checks,
+  checksPassed: checks.length,
+  screenshots,
+  health,
+  pageErrors,
+  processes,
+  failure,
+  scope:
+    'Actual copied VS Code ' +
+    adapter.identity.version +
+    ' on Linux x86-64; native menu and editor-model input, no extension. Shared donor comparison is recorded separately.'
+};
+await writeFile(join(out, 'RESULT.json'), JSON.stringify(result, null, 2) + '\n', { flag: 'wx' });
+console.log(JSON.stringify({ status: result.status, checks: checks.length, out }));
+if (failure) process.exitCode = 1;

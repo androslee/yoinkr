@@ -1,25 +1,158 @@
-import assert from 'node:assert/strict';import {readFile,writeFile,mkdir} from 'node:fs/promises';import {join} from 'node:path';import {pathToFileURL} from 'node:url';import {execFileSync} from 'node:child_process';
-import {verifySourceSlice} from '../../src/feature-slices.js';import {newDestination,saveJson} from '../../src/workspace.js';
-const [element,gimp,out,...extra]=process.argv.slice(2);if(!out||extra.length)throw Error('Use <Element slice> <GIMP slice> <new evidence directory>');
-const e=await verifySourceSlice(element,'element-search'),g=await verifySourceSlice(gimp,'gimp-smoothing'),root=await newDestination(out,[e.root,g.root]);await mkdir(root,{recursive:true});const checks=[];
-const record=async(name,fn)=>{await fn();checks.push(name);};
-const {highlightText,parseTranscript,searchTranscript,queryTerms}=await import(pathToFileURL(join(e.root,'payload/search.js')));
-const {HtmlHighlighter}=await import(pathToFileURL(join(e.root,'payload/highlighter.js')));
-await record('Original Element HTML highlighting equals token-adapter output for literal snippets',()=>{
- for(const text of ['Launch launch LAUNCH','new launch checklist','emoji 🦊 launch','banana bandana','literal a+b (value)','', 'long overlap launcher launch'])for(const query of ['launch','launch checklist','ban banana','a+b (value)','launcher launch']){
-  const terms=queryTerms(query),actual=highlightText(text,query).map(t=>t.match?'<span class="match">'+t.text+'</span>':t.text).join('');assert.equal(actual,new HtmlHighlighter('match').applyHighlights(text,terms).join(''));
- }
+import assert from 'node:assert/strict';
+import { readFile, writeFile, mkdir } from 'node:fs/promises';
+import { join } from 'node:path';
+import { pathToFileURL } from 'node:url';
+import { execFileSync } from 'node:child_process';
+import { verifySourceSlice } from '../../src/feature-slices.js';
+import { newDestination, saveJson } from '../../src/workspace.js';
+const [element, gimp, out, ...extra] = process.argv.slice(2);
+if (!out || extra.length) throw Error('Use <Element slice> <GIMP slice> <new evidence directory>');
+const e = await verifySourceSlice(element, 'element-search'),
+  g = await verifySourceSlice(gimp, 'gimp-smoothing'),
+  root = await newDestination(out, [e.root, g.root]);
+await mkdir(root, { recursive: true });
+const checks = [];
+const record = async (name, fn) => {
+  await fn();
+  checks.push(name);
+};
+const { highlightText, parseTranscript, searchTranscript, queryTerms } = await import(
+  pathToFileURL(join(e.root, 'payload/search.js'))
+);
+const { HtmlHighlighter } = await import(pathToFileURL(join(e.root, 'payload/highlighter.js')));
+await record('Original Element HTML highlighting equals token-adapter output for literal snippets', () => {
+  for (const text of [
+    'Launch launch LAUNCH',
+    'new launch checklist',
+    'emoji 🦊 launch',
+    'banana bandana',
+    'literal a+b (value)',
+    '',
+    'long overlap launcher launch'
+  ])
+    for (const query of ['launch', 'launch checklist', 'ban banana', 'a+b (value)', 'launcher launch']) {
+      const terms = queryTerms(query),
+        actual = highlightText(text, query)
+          .map(t => (t.match ? '<span class="match">' + t.text + '</span>' : t.text))
+          .join('');
+      assert.equal(actual, new HtmlHighlighter('match').applyHighlights(text, terms).join(''));
+    }
 });
-await record('Host text tokens preserve HTML, emoji, longest matches and no-query input',()=>{const text='<script>LAUNCH</script> 🦊';assert.equal(highlightText(text,'launch').map(t=>t.text).join(''),text);assert.ok(highlightText(text,'launch').some(t=>t.match&&t.text==='LAUNCH'));assert.deepEqual(highlightText('banana','banana ban'),[{text:'banana',match:true}]);assert.deepEqual(highlightText('same',''),[{text:'same',match:false}]);});
-await record('Search filters rooms and rejects malformed or oversized local transcripts',async()=>{const data=parseTranscript(await readFile(join(e.root,'payload/sample.json'),'utf8'));assert.equal(searchTranscript(data,'launch checklist').length,2);assert.equal(searchTranscript(data,'launch','Community').length,0);for(const q of ['a'.repeat(65),Array(14).fill('x').map((v,i)=>v+i).join(' ')])assert.throws(()=>queryTerms(q));assert.throws(()=>parseTranscript('[{"id":"x"}]'));assert.throws(()=>parseTranscript(' '.repeat(2*1024*1024+1)));});
-const executable=join(root,'gimp-replay');
-execFileSync(process.env.CC??'cc',['-std=c11','-Wall','-Wextra','-Werror','-O2',join(g.root,'payload/smoothing.c'),join(g.root,'payload/replay.c'),'-lm','-o',executable],{stdio:'pipe',timeout:15000});
-const points=Array.from({length:512},(_,i)=>[i*2,80+Math.sin(i/9)*30+(i%2?4:-4),(i%7)/7]);
-function reference(enabled,quality,weight){return points.map((point,i)=>{if(!enabled||i===0)return point.slice(0,2);let velocity=0,total=0,x=0,y=0;for(let j=i;j>=Math.max(0,i-quality+1);j--){velocity+=points[j][2]*100;const rate=Math.exp(-velocity*velocity/(2*weight*weight))/(Math.sqrt(2*Math.PI)*weight);total+=rate;x+=rate*points[j][0];y+=rate*points[j][1];}return total?[x/total,y/total]:[0,0];});}
-await record('Compiled original GIMP smoothing matches independent numeric reference over 512-point strokes',()=>{
- for(const enabled of [0,1])for(const quality of [1,20,100])for(const weight of [3,50,1000]){
-  const stdout=execFileSync(executable,[String(enabled),String(quality),String(weight)],{input:points.map(p=>p.join(' ')).join('\n'),encoding:'utf8',timeout:10000});const rows=stdout.trim().split('\n').map(s=>s.split(' ').map(Number));const expected=reference(enabled,quality,weight);assert.equal(rows.length,points.length);for(let i=0;i<rows.length;i++)for(let c=0;c<2;c++)assert.ok(Math.abs(rows[i][c]-expected[i][c])<1e-9,`point ${i}, ${quality}/${weight}`);
- }
+await record('Host text tokens preserve HTML, emoji, longest matches and no-query input', () => {
+  const text = '<script>LAUNCH</script> 🦊';
+  assert.equal(
+    highlightText(text, 'launch')
+      .map(t => t.text)
+      .join(''),
+    text
+  );
+  assert.ok(highlightText(text, 'launch').some(t => t.match && t.text === 'LAUNCH'));
+  assert.deepEqual(highlightText('banana', 'banana ban'), [{ text: 'banana', match: true }]);
+  assert.deepEqual(highlightText('same', ''), [{ text: 'same', match: false }]);
 });
-await record('Native replay rejects invalid options, nonfinite input and excessive traces',()=>{for(const args of [['2','20','50'],['1','0','50'],['1','101','50'],['1','20','nan'],['1','20','2']])assert.throws(()=>execFileSync(executable,args,{stdio:'pipe'}));for(const input of ['nan 1 .1','1 2 3','garbage','1 2 .1\n'.repeat(10001)])assert.throws(()=>execFileSync(executable,['1','20','50'],{input,stdio:'pipe',maxBuffer:2*1024*1024}));});
-const result={schema:1,status:'passed',checks,elementDigest:e.digest,gimpDigest:g.digest,platform:process.platform,arch:process.arch,node:process.version,compiler:execFileSync(process.env.CC??'cc',['--version'],{encoding:'utf8'}).split('\n')[0],originalElementAppAcceptance:'not-run',originalGimpGtkAcceptance:'not-run',nativeQtObsAcceptance:'not-run',scope:'Exact Element class extraction and original GIMP C function with bounded compatibility layer. Numeric/source-slice checks only; no GUI framework acceptance.'};await saveJson(join(root,'RESULT.json'),result);console.log(JSON.stringify(result,null,2));
+await record('Search filters rooms and rejects malformed or oversized local transcripts', async () => {
+  const data = parseTranscript(await readFile(join(e.root, 'payload/sample.json'), 'utf8'));
+  assert.equal(searchTranscript(data, 'launch checklist').length, 2);
+  assert.equal(searchTranscript(data, 'launch', 'Community').length, 0);
+  for (const q of [
+    'a'.repeat(65),
+    Array(14)
+      .fill('x')
+      .map((v, i) => v + i)
+      .join(' ')
+  ])
+    assert.throws(() => queryTerms(q));
+  assert.throws(() => parseTranscript('[{"id":"x"}]'));
+  assert.throws(() => parseTranscript(' '.repeat(2 * 1024 * 1024 + 1)));
+});
+const executable = join(root, 'gimp-replay');
+execFileSync(
+  process.env.CC ?? 'cc',
+  [
+    '-std=c11',
+    '-Wall',
+    '-Wextra',
+    '-Werror',
+    '-O2',
+    join(g.root, 'payload/smoothing.c'),
+    join(g.root, 'payload/replay.c'),
+    '-lm',
+    '-o',
+    executable
+  ],
+  { stdio: 'pipe', timeout: 15000 }
+);
+const points = Array.from({ length: 512 }, (_, i) => [
+  i * 2,
+  80 + Math.sin(i / 9) * 30 + (i % 2 ? 4 : -4),
+  (i % 7) / 7
+]);
+function reference(enabled, quality, weight) {
+  return points.map((point, i) => {
+    if (!enabled || i === 0) return point.slice(0, 2);
+    let velocity = 0,
+      total = 0,
+      x = 0,
+      y = 0;
+    for (let j = i; j >= Math.max(0, i - quality + 1); j--) {
+      velocity += points[j][2] * 100;
+      const rate = Math.exp((-velocity * velocity) / (2 * weight * weight)) / (Math.sqrt(2 * Math.PI) * weight);
+      total += rate;
+      x += rate * points[j][0];
+      y += rate * points[j][1];
+    }
+    return total ? [x / total, y / total] : [0, 0];
+  });
+}
+await record('Compiled original GIMP smoothing matches independent numeric reference over 512-point strokes', () => {
+  for (const enabled of [0, 1])
+    for (const quality of [1, 20, 100])
+      for (const weight of [3, 50, 1000]) {
+        const stdout = execFileSync(executable, [String(enabled), String(quality), String(weight)], {
+          input: points.map(p => p.join(' ')).join('\n'),
+          encoding: 'utf8',
+          timeout: 10000
+        });
+        const rows = stdout
+          .trim()
+          .split('\n')
+          .map(s => s.split(' ').map(Number));
+        const expected = reference(enabled, quality, weight);
+        assert.equal(rows.length, points.length);
+        for (let i = 0; i < rows.length; i++)
+          for (let c = 0; c < 2; c++)
+            assert.ok(Math.abs(rows[i][c] - expected[i][c]) < 1e-9, `point ${i}, ${quality}/${weight}`);
+      }
+});
+await record('Native replay rejects invalid options, nonfinite input and excessive traces', () => {
+  for (const args of [
+    ['2', '20', '50'],
+    ['1', '0', '50'],
+    ['1', '101', '50'],
+    ['1', '20', 'nan'],
+    ['1', '20', '2']
+  ])
+    assert.throws(() => execFileSync(executable, args, { stdio: 'pipe' }));
+  for (const input of ['nan 1 .1', '1 2 3', 'garbage', '1 2 .1\n'.repeat(10001)])
+    assert.throws(() =>
+      execFileSync(executable, ['1', '20', '50'], { input, stdio: 'pipe', maxBuffer: 2 * 1024 * 1024 })
+    );
+});
+const result = {
+  schema: 1,
+  status: 'passed',
+  checks,
+  elementDigest: e.digest,
+  gimpDigest: g.digest,
+  platform: process.platform,
+  arch: process.arch,
+  node: process.version,
+  compiler: execFileSync(process.env.CC ?? 'cc', ['--version'], { encoding: 'utf8' }).split('\n')[0],
+  originalElementAppAcceptance: 'not-run',
+  originalGimpGtkAcceptance: 'not-run',
+  nativeQtObsAcceptance: 'not-run',
+  scope:
+    'Exact Element class extraction and original GIMP C function with bounded compatibility layer. Numeric/source-slice checks only; no GUI framework acceptance.'
+};
+await saveJson(join(root, 'RESULT.json'), result);
+console.log(JSON.stringify(result, null, 2));

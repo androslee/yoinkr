@@ -11,6 +11,8 @@
   },
   "scripts": {
     "test": "node --test test/*.test.js",
+    "format": "prettier --write \"{src,test,scripts}/**/*.{js,cjs,mjs}\"",
+    "format:check": "prettier --check \"{src,test,scripts}/**/*.{js,cjs,mjs}\"",
     "test:browser": "node scripts/general/browser-smoke.mjs",
     "test:research": "node scripts/general/research-smoke.mjs",
     "test:mqtt": "node scripts/applications/examples-smoke.mjs",
@@ -94,21 +96,22 @@
     "examples"
   ],
   "dependencies": {
+    "@babel/parser": "8.0.4",
     "@jridgewell/trace-mapping": "0.3.31",
-    "rea-agents": "6.7.0",
     "@modelcontextprotocol/server": "2.3.1",
-    "zod": "4.4.3",
-    "@babel/parser": "8.0.4"
+    "rea-agents": "6.7.0",
+    "zod": "4.4.3"
   },
   "devDependencies": {
     "@electron/asar": "4.2.0",
+    "@modelcontextprotocol/client": "2.3.1",
     "aedes": "0.51.3",
     "dompurify": "3.3.0",
     "esbuild": "0.25.12",
     "js-base64": "3.7.8",
     "markdown-it": "14.1.0",
     "mqtt": "5.14.1",
-    "sha1": "1.1.1",
-    "@modelcontextprotocol/client": "2.3.1"
+    "prettier": "3.9.10",
+    "sha1": "1.1.1"
   }
 }
