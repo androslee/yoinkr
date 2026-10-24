@@ -1,2 +1,20 @@
-import {mkdir,writeFile} from 'node:fs/promises';import {join} from 'node:path';import {replayFixture} from './replay-fixture.js';
-export async function uiFixture(){const f=await replayFixture(),app=join(f.root,'ui-app');await mkdir(app);await writeFile(join(app,'index.html'),'<!doctype html><h1>Fixture</h1>');await writeFile(join(f.root,'input.txt'),'fixture');const recipe={schema:1,title:'Fixture UI',casePath:f.casePath,target:{root:app,entry:'index.html'},steps:[{action:'assert',selector:'h1',property:'text',expected:'Fixture'}]},recipePath=join(f.root,'ui.json');await writeFile(recipePath,JSON.stringify(recipe));return {...f,app,recipe,recipePath};}
+import { mkdir, writeFile } from 'node:fs/promises';
+import { join } from 'node:path';
+import { replayFixture } from './replay-fixture.js';
+export async function uiFixture() {
+  const f = await replayFixture(),
+    app = join(f.root, 'ui-app');
+  await mkdir(app);
+  await writeFile(join(app, 'index.html'), '<!doctype html><h1>Fixture</h1>');
+  await writeFile(join(f.root, 'input.txt'), 'fixture');
+  const recipe = {
+      schema: 1,
+      title: 'Fixture UI',
+      casePath: f.casePath,
+      target: { root: app, entry: 'index.html' },
+      steps: [{ action: 'assert', selector: 'h1', property: 'text', expected: 'Fixture' }]
+    },
+    recipePath = join(f.root, 'ui.json');
+  await writeFile(recipePath, JSON.stringify(recipe));
+  return { ...f, app, recipe, recipePath };
+}

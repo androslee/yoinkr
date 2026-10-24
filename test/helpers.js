@@ -20,7 +20,7 @@ export function writeAsar(dir, entries) {
     const buf = Buffer.from(typeof e.content === 'string' ? e.content : JSON.stringify(e.content), 'utf8');
     const parts = e.path.split('/');
     let node = header;
-    for (const part of parts.slice(0, -1)) node = (node.files[part] ??= { files: {} });
+    for (const part of parts.slice(0, -1)) node = node.files[part] ??= { files: {} };
     node.files[parts.at(-1)] = { offset: String(offset), size: String(buf.length) };
     data.push(buf);
     offset += buf.length;
@@ -52,14 +52,21 @@ export function mockTransport(handler) {
       this.sent.push(JSON.parse(text));
       const req = JSON.parse(text);
       const res = handler(req);
-      if (res) queueMicrotask(() => messageHandlers.forEach((cb) => cb(JSON.stringify({ id: req.id, ...res }))));
+      if (res) queueMicrotask(() => messageHandlers.forEach(cb => cb(JSON.stringify({ id: req.id, ...res }))));
     },
-    onMessage(cb) { messageHandlers.push(cb); },
-    onClose(cb) { closeHandlers.push(cb); },
+    onMessage(cb) {
+      messageHandlers.push(cb);
+    },
+    onClose(cb) {
+      closeHandlers.push(cb);
+    },
     emit(method, params, sessionId) {
-      messageHandlers.forEach((cb) => cb(JSON.stringify({ method, params, ...(sessionId ? { sessionId } : {}) })));
+      messageHandlers.forEach(cb => cb(JSON.stringify({ method, params, ...(sessionId ? { sessionId } : {}) })));
     },
-    close() { this.closed = true; closeHandlers.forEach((cb) => cb()); },
+    close() {
+      this.closed = true;
+      closeHandlers.forEach(cb => cb());
+    }
   };
 }
 

@@ -8,7 +8,7 @@ import { readHeader, findEntry, readEntryBuffer, readEntryJson, sha256File } fro
 const dir = tempDir();
 const asar = writeAsar(dir, [
   { path: 'package.json', content: { name: 'fixture-app', version: '1.2.3' } },
-  { path: 'dist/main.js', content: 'console.log(1);\n' },
+  { path: 'dist/main.js', content: 'console.log(1);\n' }
 ]);
 
 test('reads header and locates entries', () => {

@@ -1,16 +1,184 @@
-import assert from 'node:assert/strict';import {readFile,writeFile,mkdir} from 'node:fs/promises';import {resolve,join} from 'node:path';import {spawn} from 'node:child_process';
-import {applyElectronPlaybook,rollbackElectronPlaybook,electronPlaybookStatus} from '../../src/electron-playbook.js';import {sha256} from '../../src/workspace.js';
-const root=resolve(process.argv[2]??'builds/playbook-v0.14'),out=resolve(process.argv[3]??join(root,'acceptance'));await mkdir(out,{recursive:true});
-const demo=JSON.parse(await readFile(join(root,'SHOWCASE.json'))),playwright=await import(process.env.PLAYWRIGHT_MODULE??'playwright');let display,app,browser,logs='',displayText='';const checks=[];
-const until=async(fn,timeout=15000)=>{const end=Date.now()+timeout;while(!await fn()){if(Date.now()>end)throw Error('Native playbook acceptance timed out');await new Promise(r=>setTimeout(r,50));}};
-const stop=async child=>{if(!child||child.exitCode!==null)return;await new Promise(r=>{child.once('exit',r);child.kill('SIGTERM');const timer=setTimeout(()=>{if(child.exitCode===null)child.kill('SIGKILL');r();},2000);timer.unref();});};
-const launch=async(workspace,suffix)=>{let appLogs='';const env=Object.fromEntries(Object.entries(process.env).filter(([k])=>!k.startsWith('VSCODE_')&&!['ELECTRON_RUN_AS_NODE','XAUTHORITY'].includes(k)));Object.assign(env,{DISPLAY:':'+displayText.trim().split('\n')[0],YOINKR_PROFILE_SUFFIX:suffix});app=spawn(process.execPath,[join(root,'launch.mjs'),workspace,'--no-sandbox','--disable-gpu','--disable-extensions','--skip-welcome','--skip-release-notes','--remote-debugging-port=0','--remote-debugging-address=127.0.0.1'],{env,stdio:['ignore','pipe','pipe']});for(const stream of [app.stdout,app.stderr])stream.on('data',b=>{appLogs=(appLogs+b).slice(-100000);logs=(logs+b).slice(-200000);});app.on('error',e=>appLogs+=e.message);await until(()=>/DevTools listening on (ws:\/\/\S+)/.test(appLogs),25000);browser=await playwright.chromium.connectOverCDP(/DevTools listening on (ws:\/\/\S+)/.exec(appLogs)[1]);await until(()=>browser.contexts()[0].pages().some(p=>p.url().endsWith('/modkit-native/panel.html')));const page=browser.contexts()[0].pages().find(p=>p.url().endsWith('/modkit-native/panel.html'));await page.waitForLoadState('domcontentloaded');return page;};
-const close=async()=>{await browser?.close().catch(()=>{});browser=null;await stop(app);app=null;};
-try{
- display=spawn((process.env.YOINKR_XVFB??process.env.MODKIT_XVFB)??'/tmp/yoinkr-xvfb/root/usr/bin/Xvfb',['-displayfd','1','-screen','0','1280x900x24','-nolisten','tcp','-ac'],{stdio:['ignore','pipe','pipe']});display.stdout.on('data',b=>displayText+=b);display.stderr.on('data',b=>logs+=b);display.on('error',e=>logs+=e.message);await until(()=>/^\d+\n/.test(displayText),5000);
- assert.equal((await electronPlaybookStatus(demo.workspace)).clean,true);const page=await launch(demo.workspace,'test'),errors=[];page.on('pageerror',e=>errors.push(e.message));await page.locator('#playbook-info').click();await page.locator('#playbook-status').filter({hasText:'Main → preload → renderer'}).waitFor();const native=await page.evaluate(()=>window.modkitHost.playbookInfo());assert.equal(native.process,'main');assert.equal(native.extensionsUsed,false);assert.equal(await page.evaluate(()=>typeof require),'undefined');assert.equal(await page.evaluate(()=>typeof window.modkitHost.playbookInfo),'function');await page.screenshot({path:join(out,'native-playbook.png'),fullPage:true});assert.deepEqual(errors,[]);checks.push('Actual copied Electron app completes a main/preload/renderer IPC round trip with extensions disabled and Node unavailable to the renderer');await close();
- const rollbackCopy=join(root,'rollback-check');await applyElectronPlaybook(demo.source,demo.recipe,rollbackCopy);await mkdir(join(rollbackCopy,'p/keep'),{recursive:true});await writeFile(join(rollbackCopy,'p/keep/user-data.txt'),'preserve profile');assert.equal((await rollbackElectronPlaybook(rollbackCopy,{dryRun:true})).status,'rollback-ready');assert.equal((await electronPlaybookStatus(rollbackCopy)).status,'applied');const restored=await rollbackElectronPlaybook(rollbackCopy);assert.equal(restored.clean,true);assert.equal(restored.status,'rolled-back');assert.equal(await readFile(join(rollbackCopy,'p/keep/user-data.txt'),'utf8'),'preserve profile');checks.push('Rollback preview is read-only; rollback restores all original files, deletes created assets and preserves separate profile data');
- const restoredPage=await launch(rollbackCopy,'test');assert.equal(await restoredPage.locator('#playbook-info').count(),0);assert.equal(await restoredPage.evaluate(()=>typeof window.modkitHost.playbookInfo),'undefined');const info=await restoredPage.evaluate(()=>new Promise(resolve=>{const off=modkitHost.onMessage(m=>{if(m.type==='host-info'){off();resolve(m);}});modkitHost.send({type:'host-info'});}));assert.equal(info.nativeMenu,true);assert.equal(info.extensionsUsed,false);await restoredPage.screenshot({path:join(out,'native-rolled-back.png'),fullPage:true});checks.push('Restored native app actually relaunches with its prior MQTT menu/preload and without the added feature');await close();
- const manifest=JSON.parse(await readFile(demo.recipe));for(const f of manifest.files){if(f.beforeSha256!==null)assert.equal(sha256(await readFile(join(demo.source,manifest.target.app,f.file))),f.beforeSha256);}assert.equal((await electronPlaybookStatus(demo.workspace)).clean,true);checks.push('Source showcase hashes remain unchanged and the separate reviewable patched copy remains available');
- await writeFile(join(out,'VERIFICATION.json'),JSON.stringify({version:'0.14.0',passed:true,checks,native,source:demo.source,workspace:demo.workspace,rollbackCopy,scope:'Linux extracted VS Code runtime with existing native host. Does not claim signed/macOS, packed ASAR, or arbitrary cross-version compatibility.'},null,2));console.log('NATIVE ELECTRON PLAYBOOK CHECKS PASSED:',checks.length);
-}catch(e){await writeFile(join(out,'FAILED.txt'),e.stack??e.message);throw e;}finally{await close();await stop(display);await writeFile(join(out,'native.log'),logs);}
+import assert from 'node:assert/strict';
+import { readFile, writeFile, mkdir } from 'node:fs/promises';
+import { resolve, join } from 'node:path';
+import { spawn } from 'node:child_process';
+import {
+  applyElectronPlaybook,
+  rollbackElectronPlaybook,
+  electronPlaybookStatus
+} from '../../src/electron-playbook.js';
+import { sha256 } from '../../src/workspace.js';
+const root = resolve(process.argv[2] ?? 'builds/playbook-v0.14'),
+  out = resolve(process.argv[3] ?? join(root, 'acceptance'));
+await mkdir(out, { recursive: true });
+const demo = JSON.parse(await readFile(join(root, 'SHOWCASE.json'))),
+  playwright = await import(process.env.PLAYWRIGHT_MODULE ?? 'playwright');
+let display,
+  app,
+  browser,
+  logs = '',
+  displayText = '';
+const checks = [];
+const until = async (fn, timeout = 15000) => {
+  const end = Date.now() + timeout;
+  while (!(await fn())) {
+    if (Date.now() > end) throw Error('Native playbook acceptance timed out');
+    await new Promise(r => setTimeout(r, 50));
+  }
+};
+const stop = async child => {
+  if (!child || child.exitCode !== null) return;
+  await new Promise(r => {
+    child.once('exit', r);
+    child.kill('SIGTERM');
+    const timer = setTimeout(() => {
+      if (child.exitCode === null) child.kill('SIGKILL');
+      r();
+    }, 2000);
+    timer.unref();
+  });
+};
+const launch = async (workspace, suffix) => {
+  let appLogs = '';
+  const env = Object.fromEntries(
+    Object.entries(process.env).filter(
+      ([k]) => !k.startsWith('VSCODE_') && !['ELECTRON_RUN_AS_NODE', 'XAUTHORITY'].includes(k)
+    )
+  );
+  Object.assign(env, { DISPLAY: ':' + displayText.trim().split('\n')[0], YOINKR_PROFILE_SUFFIX: suffix });
+  app = spawn(
+    process.execPath,
+    [
+      join(root, 'launch.mjs'),
+      workspace,
+      '--no-sandbox',
+      '--disable-gpu',
+      '--disable-extensions',
+      '--skip-welcome',
+      '--skip-release-notes',
+      '--remote-debugging-port=0',
+      '--remote-debugging-address=127.0.0.1'
+    ],
+    { env, stdio: ['ignore', 'pipe', 'pipe'] }
+  );
+  for (const stream of [app.stdout, app.stderr])
+    stream.on('data', b => {
+      appLogs = (appLogs + b).slice(-100000);
+      logs = (logs + b).slice(-200000);
+    });
+  app.on('error', e => (appLogs += e.message));
+  await until(() => /DevTools listening on (ws:\/\/\S+)/.test(appLogs), 25000);
+  browser = await playwright.chromium.connectOverCDP(/DevTools listening on (ws:\/\/\S+)/.exec(appLogs)[1]);
+  await until(() =>
+    browser
+      .contexts()[0]
+      .pages()
+      .some(p => p.url().endsWith('/modkit-native/panel.html'))
+  );
+  const page = browser
+    .contexts()[0]
+    .pages()
+    .find(p => p.url().endsWith('/modkit-native/panel.html'));
+  await page.waitForLoadState('domcontentloaded');
+  return page;
+};
+const close = async () => {
+  await browser?.close().catch(() => {});
+  browser = null;
+  await stop(app);
+  app = null;
+};
+try {
+  display = spawn(
+    process.env.YOINKR_XVFB ?? process.env.MODKIT_XVFB ?? '/tmp/yoinkr-xvfb/root/usr/bin/Xvfb',
+    ['-displayfd', '1', '-screen', '0', '1280x900x24', '-nolisten', 'tcp', '-ac'],
+    { stdio: ['ignore', 'pipe', 'pipe'] }
+  );
+  display.stdout.on('data', b => (displayText += b));
+  display.stderr.on('data', b => (logs += b));
+  display.on('error', e => (logs += e.message));
+  await until(() => /^\d+\n/.test(displayText), 5000);
+  assert.equal((await electronPlaybookStatus(demo.workspace)).clean, true);
+  const page = await launch(demo.workspace, 'test'),
+    errors = [];
+  page.on('pageerror', e => errors.push(e.message));
+  await page.locator('#playbook-info').click();
+  await page.locator('#playbook-status').filter({ hasText: 'Main → preload → renderer' }).waitFor();
+  const native = await page.evaluate(() => window.modkitHost.playbookInfo());
+  assert.equal(native.process, 'main');
+  assert.equal(native.extensionsUsed, false);
+  assert.equal(await page.evaluate(() => typeof require), 'undefined');
+  assert.equal(await page.evaluate(() => typeof window.modkitHost.playbookInfo), 'function');
+  await page.screenshot({ path: join(out, 'native-playbook.png'), fullPage: true });
+  assert.deepEqual(errors, []);
+  checks.push(
+    'Actual copied Electron app completes a main/preload/renderer IPC round trip with extensions disabled and Node unavailable to the renderer'
+  );
+  await close();
+  const rollbackCopy = join(root, 'rollback-check');
+  await applyElectronPlaybook(demo.source, demo.recipe, rollbackCopy);
+  await mkdir(join(rollbackCopy, 'p/keep'), { recursive: true });
+  await writeFile(join(rollbackCopy, 'p/keep/user-data.txt'), 'preserve profile');
+  assert.equal((await rollbackElectronPlaybook(rollbackCopy, { dryRun: true })).status, 'rollback-ready');
+  assert.equal((await electronPlaybookStatus(rollbackCopy)).status, 'applied');
+  const restored = await rollbackElectronPlaybook(rollbackCopy);
+  assert.equal(restored.clean, true);
+  assert.equal(restored.status, 'rolled-back');
+  assert.equal(await readFile(join(rollbackCopy, 'p/keep/user-data.txt'), 'utf8'), 'preserve profile');
+  checks.push(
+    'Rollback preview is read-only; rollback restores all original files, deletes created assets and preserves separate profile data'
+  );
+  const restoredPage = await launch(rollbackCopy, 'test');
+  assert.equal(await restoredPage.locator('#playbook-info').count(), 0);
+  assert.equal(await restoredPage.evaluate(() => typeof window.modkitHost.playbookInfo), 'undefined');
+  const info = await restoredPage.evaluate(
+    () =>
+      new Promise(resolve => {
+        const off = modkitHost.onMessage(m => {
+          if (m.type === 'host-info') {
+            off();
+            resolve(m);
+          }
+        });
+        modkitHost.send({ type: 'host-info' });
+      })
+  );
+  assert.equal(info.nativeMenu, true);
+  assert.equal(info.extensionsUsed, false);
+  await restoredPage.screenshot({ path: join(out, 'native-rolled-back.png'), fullPage: true });
+  checks.push('Restored native app actually relaunches with its prior MQTT menu/preload and without the added feature');
+  await close();
+  const manifest = JSON.parse(await readFile(demo.recipe));
+  for (const f of manifest.files) {
+    if (f.beforeSha256 !== null)
+      assert.equal(sha256(await readFile(join(demo.source, manifest.target.app, f.file))), f.beforeSha256);
+  }
+  assert.equal((await electronPlaybookStatus(demo.workspace)).clean, true);
+  checks.push('Source showcase hashes remain unchanged and the separate reviewable patched copy remains available');
+  await writeFile(
+    join(out, 'VERIFICATION.json'),
+    JSON.stringify(
+      {
+        version: '0.14.0',
+        passed: true,
+        checks,
+        native,
+        source: demo.source,
+        workspace: demo.workspace,
+        rollbackCopy,
+        scope:
+          'Linux extracted VS Code runtime with existing native host. Does not claim signed/macOS, packed ASAR, or arbitrary cross-version compatibility.'
+      },
+      null,
+      2
+    )
+  );
+  console.log('NATIVE ELECTRON PLAYBOOK CHECKS PASSED:', checks.length);
+} catch (e) {
+  await writeFile(join(out, 'FAILED.txt'), e.stack ?? e.message);
+  throw e;
+} finally {
+  await close();
+  await stop(display);
+  await writeFile(join(out, 'native.log'), logs);
+}

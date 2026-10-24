@@ -1,9 +1,109 @@
 'use strict';
-const fs=require('node:fs/promises'),path=require('node:path'),{createHash}=require('node:crypto');
-const hash=b=>createHash('sha256').update(b).digest('hex');
-const canonical=v=>JSON.stringify(v&&typeof v==='object'?Array.isArray(v)?v.map(x=>JSON.parse(canonical(x))):Object.fromEntries(Object.keys(v).sort().map(k=>[k,JSON.parse(canonical(v[k]))])):v);
-const expected=['.native/workspace.json','.native/recipe.json','.native/evidence/elf.json','.native/evidence/elf.json.stderr.log','.native/inputs/libz.so','.native/inputs/zlib.h','.native/inputs/zconf.h','.native/inputs/LICENSE.txt','recipient/libz.so','recipient/host.py','bridge/worker.py'];
-async function ordinary(root,name,max=8*1024*1024){if(!expected.includes(name)&&name!=='COMPONENT.json')throw Error('Unregistered component artifact');let current=root;for(const part of name.split('/')){current=path.join(current,part);const s=await fs.lstat(current);if(s.isSymbolicLink())throw Error('Component symlink refused')}const s=await fs.lstat(current);if(!s.isFile()||s.size>max)throw Error('Invalid component file');return fs.readFile(current)}
-async function verifyComponentPackage(directory,expectedDigest){const root=await fs.realpath(directory),manifest=JSON.parse(await ordinary(root,'COMPONENT.json',1024*1024));if(manifest.schema!==1||manifest.kind!=='component-process-package'||manifest.id!=='zlib-crc32'||manifest.profile!=='zlib-crc32-stdio-v1'||manifest.protocol!==1||!Array.isArray(manifest.files)||manifest.files.length!==expected.length||new Set(manifest.files.map(f=>f.path)).size!==expected.length)throw Error('Invalid registered component package');const {digest,...identity}=manifest;if(!/^[a-f0-9]{64}$/.test(digest)||hash(canonical(identity))!==digest||expectedDigest&&expectedDigest!==digest)throw Error('Component package digest differs');let total=0;for(const f of manifest.files){if(!/^[a-f0-9]{64}$/.test(f.sha256))throw Error('Invalid component artifact hash');const b=await ordinary(root,f.path);total+=b.length;if(total>16*1024*1024||b.length!==f.bytes||hash(b)!==f.sha256)throw Error('Component artifact drift: '+f.path)}
- const recipe=JSON.parse(await ordinary(root,'.native/recipe.json')),state=JSON.parse(await ordinary(root,'.native/workspace.json')),evidence=JSON.parse(await ordinary(root,'.native/evidence/elf.json'));const library=manifest.files.find(f=>f.path==='recipient/libz.so');if(!Array.isArray(state.artifacts)||state.artifacts.length!==9)throw Error('Incomplete retained native provenance');for(const original of state.artifacts){const copied=manifest.files.find(f=>f.path===original.path);if(!copied||copied.sha256!==original.sha256||copied.bytes!==original.bytes)throw Error('Retained native provenance changed: '+original.path)}for(const original of recipe.inputs??[]){if(manifest.files.find(f=>f.path==='.native/inputs/'+original.file)?.sha256!==original.sha256)throw Error('Original source input differs')} if(recipe.profile!=='zlib-crc32-linux-x64-v1'||state.librarySha256!==library.sha256||recipe.inputs?.find(f=>f.role==='library')?.sha256!==library.sha256||manifest.files.find(f=>f.path==='.native/inputs/libz.so').sha256!==library.sha256||manifest.librarySha256!==library.sha256||manifest.zlibVersion!==state.headerVersion||evidence.data?.subject?.digest?.sha256!==library.sha256)throw Error('Component provenance/ABI binding differs');return {directory:root,status:'verified',digest,profile:manifest.profile,librarySha256:library.sha256,zlibVersion:manifest.zlibVersion,entry:path.join(root,'bridge/worker.py'),library:path.join(root,'recipient/libz.so'),manifest};}
-module.exports={verifyComponentPackage,canonical,hash};
+const fs = require('node:fs/promises'),
+  path = require('node:path'),
+  { createHash } = require('node:crypto');
+const hash = b => createHash('sha256').update(b).digest('hex');
+const canonical = v =>
+  JSON.stringify(
+    v && typeof v === 'object'
+      ? Array.isArray(v)
+        ? v.map(x => JSON.parse(canonical(x)))
+        : Object.fromEntries(
+            Object.keys(v)
+              .sort()
+              .map(k => [k, JSON.parse(canonical(v[k]))])
+          )
+      : v
+  );
+const expected = [
+  '.native/workspace.json',
+  '.native/recipe.json',
+  '.native/evidence/elf.json',
+  '.native/evidence/elf.json.stderr.log',
+  '.native/inputs/libz.so',
+  '.native/inputs/zlib.h',
+  '.native/inputs/zconf.h',
+  '.native/inputs/LICENSE.txt',
+  'recipient/libz.so',
+  'recipient/host.py',
+  'bridge/worker.py'
+];
+async function ordinary(root, name, max = 8 * 1024 * 1024) {
+  if (!expected.includes(name) && name !== 'COMPONENT.json') throw Error('Unregistered component artifact');
+  let current = root;
+  for (const part of name.split('/')) {
+    current = path.join(current, part);
+    const s = await fs.lstat(current);
+    if (s.isSymbolicLink()) throw Error('Component symlink refused');
+  }
+  const s = await fs.lstat(current);
+  if (!s.isFile() || s.size > max) throw Error('Invalid component file');
+  return fs.readFile(current);
+}
+async function verifyComponentPackage(directory, expectedDigest) {
+  const root = await fs.realpath(directory),
+    manifest = JSON.parse(await ordinary(root, 'COMPONENT.json', 1024 * 1024));
+  if (
+    manifest.schema !== 1 ||
+    manifest.kind !== 'component-process-package' ||
+    manifest.id !== 'zlib-crc32' ||
+    manifest.profile !== 'zlib-crc32-stdio-v1' ||
+    manifest.protocol !== 1 ||
+    !Array.isArray(manifest.files) ||
+    manifest.files.length !== expected.length ||
+    new Set(manifest.files.map(f => f.path)).size !== expected.length
+  )
+    throw Error('Invalid registered component package');
+  const { digest, ...identity } = manifest;
+  if (
+    !/^[a-f0-9]{64}$/.test(digest) ||
+    hash(canonical(identity)) !== digest ||
+    (expectedDigest && expectedDigest !== digest)
+  )
+    throw Error('Component package digest differs');
+  let total = 0;
+  for (const f of manifest.files) {
+    if (!/^[a-f0-9]{64}$/.test(f.sha256)) throw Error('Invalid component artifact hash');
+    const b = await ordinary(root, f.path);
+    total += b.length;
+    if (total > 16 * 1024 * 1024 || b.length !== f.bytes || hash(b) !== f.sha256)
+      throw Error('Component artifact drift: ' + f.path);
+  }
+  const recipe = JSON.parse(await ordinary(root, '.native/recipe.json')),
+    state = JSON.parse(await ordinary(root, '.native/workspace.json')),
+    evidence = JSON.parse(await ordinary(root, '.native/evidence/elf.json'));
+  const library = manifest.files.find(f => f.path === 'recipient/libz.so');
+  if (!Array.isArray(state.artifacts) || state.artifacts.length !== 9)
+    throw Error('Incomplete retained native provenance');
+  for (const original of state.artifacts) {
+    const copied = manifest.files.find(f => f.path === original.path);
+    if (!copied || copied.sha256 !== original.sha256 || copied.bytes !== original.bytes)
+      throw Error('Retained native provenance changed: ' + original.path);
+  }
+  for (const original of recipe.inputs ?? []) {
+    if (manifest.files.find(f => f.path === '.native/inputs/' + original.file)?.sha256 !== original.sha256)
+      throw Error('Original source input differs');
+  }
+  if (
+    recipe.profile !== 'zlib-crc32-linux-x64-v1' ||
+    state.librarySha256 !== library.sha256 ||
+    recipe.inputs?.find(f => f.role === 'library')?.sha256 !== library.sha256 ||
+    manifest.files.find(f => f.path === '.native/inputs/libz.so').sha256 !== library.sha256 ||
+    manifest.librarySha256 !== library.sha256 ||
+    manifest.zlibVersion !== state.headerVersion ||
+    evidence.data?.subject?.digest?.sha256 !== library.sha256
+  )
+    throw Error('Component provenance/ABI binding differs');
+  return {
+    directory: root,
+    status: 'verified',
+    digest,
+    profile: manifest.profile,
+    librarySha256: library.sha256,
+    zlibVersion: manifest.zlibVersion,
+    entry: path.join(root, 'bridge/worker.py'),
+    library: path.join(root, 'recipient/libz.so'),
+    manifest
+  };
+}
+module.exports = { verifyComponentPackage, canonical, hash };

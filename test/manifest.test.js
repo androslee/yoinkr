@@ -3,10 +3,14 @@ import assert from 'node:assert/strict';
 import { validateManifest, satisfies, matchesTarget, detectConflicts } from '../src/manifest.js';
 
 const base = {
-  schema: 1, id: 'a', name: 'A', version: '0.1.0', entry: 'entry.js',
+  schema: 1,
+  id: 'a',
+  name: 'A',
+  version: '0.1.0',
+  entry: 'entry.js',
   targets: [{ app: 'fixture-app', versions: '^1.2.0', tested: ['1.2.3'] }],
   touches: { dom: ['#x'] },
-  provenance: { source: 'test' },
+  provenance: { source: 'test' }
 };
 
 test('accepts a well-formed manifest', () => {
@@ -22,9 +26,9 @@ test('reports missing required fields', () => {
   bad.targets = [];
   const res = validateManifest(bad);
   assert.equal(res.ok, false);
-  assert.ok(res.errors.some((e) => e.includes('.id')));
-  assert.ok(res.errors.some((e) => e.includes('.entry')));
-  assert.ok(res.errors.some((e) => e.includes('.targets')));
+  assert.ok(res.errors.some(e => e.includes('.id')));
+  assert.ok(res.errors.some(e => e.includes('.entry')));
+  assert.ok(res.errors.some(e => e.includes('.targets')));
 });
 
 test('warns on untested targets and missing provenance', () => {
@@ -56,15 +60,15 @@ test('conflict detection: overlap warns, declarations and exclusivity error', ()
   const a = structuredClone(base);
   const b = { ...structuredClone(base), id: 'b', touches: { dom: ['#x'] } };
   let conflicts = detectConflicts([a, b]);
-  assert.deepEqual(conflicts.map((c) => c.kind).sort(), ['touch_overlap']);
+  assert.deepEqual(conflicts.map(c => c.kind).sort(), ['touch_overlap']);
 
   b.conflicts_with = ['a'];
   conflicts = detectConflicts([a, b]);
-  assert.ok(conflicts.some((c) => c.kind === 'declared' && c.severity === 'error'));
+  assert.ok(conflicts.some(c => c.kind === 'declared' && c.severity === 'error'));
 
   const c = { ...structuredClone(base), id: 'c', touches: {}, exclusive: true };
   conflicts = detectConflicts([a, c]);
-  assert.ok(conflicts.some((c2) => c2.kind === 'exclusive' && c2.severity === 'error'));
+  assert.ok(conflicts.some(c2 => c2.kind === 'exclusive' && c2.severity === 'error'));
 
   assert.deepEqual(detectConflicts([a]), []);
 });

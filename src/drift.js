@@ -12,16 +12,23 @@ export async function computeState(app) {
     appId: app.appId,
     appVersion: pkg?.version ?? null,
     asarSha256: await sha256File(app.asarPath),
-    entries: countEntries(header),
+    entries: countEntries(header)
   };
 }
 
 export function makePin(state, modIds, pinnedAt = new Date().toISOString()) {
-  return { schema: 1, pinnedAt, mods: [...modIds].sort(), appVersion: state.appVersion, asarSha256: state.asarSha256, entries: state.entries };
+  return {
+    schema: 1,
+    pinnedAt,
+    mods: [...modIds].sort(),
+    appVersion: state.appVersion,
+    asarSha256: state.asarSha256,
+    entries: state.entries
+  };
 }
 
 export function checkDrift(pin, current, policy = 'refuse') {
-  if(!['refuse','warn','continue'].includes(policy))throw new Error('invalid drift policy; use pin to rebaseline');
+  if (!['refuse', 'warn', 'continue'].includes(policy)) throw new Error('invalid drift policy; use pin to rebaseline');
   if (!pin) return { verdict: 'unpinned', action: policy === 'refuse' ? 'warn' : policy, changed: null };
   if (pin.asarSha256 === current.asarSha256) return { verdict: 'match', action: 'continue', changed: null };
   const action = policy === 'refuse' ? 'refuse' : policy === 'continue' ? 'continue' : 'warn';
@@ -30,7 +37,7 @@ export function checkDrift(pin, current, policy = 'refuse') {
     action,
     pinnedVersion: pin.appVersion,
     currentVersion: current.appVersion,
-    changed: diffEntryCounts(pin.entries, current.entries),
+    changed: diffEntryCounts(pin.entries, current.entries)
   };
 }
 

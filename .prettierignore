@@ -1,0 +1,23 @@
+# Payload and runtime trees whose exact bytes are hashed into feature packages,
+# component packages and host adapters. src/feature-package.js reads
+# src/feature-runtime/ verbatim, and the resulting digest is pinned in five
+# recipes under recipes/ and quoted in docs/FEATURE_HOSTS.md and docs/RENAMING.md.
+# Reformatting any of this silently invalidates every one of those pins.
+src/feature-runtime/
+src/component-runtime/
+src/example-runtime/
+src/feature-drivers/
+src/host-adapters/*/runtime/
+src/report/
+src/workbench/
+src/native/
+
+# Recovered third-party code and transfer inputs. These keep their upstream
+# formatting for attribution and provenance; see docs/UPSTREAMS.md.
+addons/
+mods/
+examples/
+recipes/
+
+node_modules/
+package-lock.json

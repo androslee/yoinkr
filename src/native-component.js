@@ -1,31 +1,475 @@
-import {readFile,writeFile,mkdir,lstat,realpath} from 'node:fs/promises';
-import {resolve,join,dirname,isAbsolute,basename} from 'node:path';import {fileURLToPath} from 'node:url';import {spawn} from 'node:child_process';import {randomUUID} from 'node:crypto';
-import {safeRelative} from './research.js';import {sha256,inside,newDestination,saveJson} from './workspace.js';import {runRea,reaInfo} from './rea.js';
-export const nativeProfile='zlib-crc32-linux-x64-v1';
-const digest=/^[a-f0-9]{64}$/;const roles=['library','header','types','license'];
-const exact=(o,keys)=>{if(!o||typeof o!=='object'||Array.isArray(o)||Object.keys(o).some(k=>!keys.includes(k)))throw Error('unsupported native fields');};
-const pathName=n=>{safeRelative(n);if(n.length>500||n.includes('\0'))throw Error('invalid native path');return n;};
-export function crc32Reference(chunks,seed=0){let value=(seed^0xffffffff)>>>0;for(const chunk of chunks)for(const byte of chunk){value^=byte;for(let bit=0;bit<8;bit++)value=(value>>>1)^((value&1)?0xedb88320:0);}return (value^0xffffffff)>>>0;}
-export function validateNativeCases(cases){if(!Array.isArray(cases)||!cases.length||cases.length>32)throw Error('expected 1–32 native cases');let total=0;const names=new Set();for(const c of cases){exact(c,['name','chunks','seed','expected']);if(typeof c.name!=='string'||!c.name||c.name.length>160||names.has(c.name))throw Error('invalid/duplicate case name');names.add(c.name);if(!Number.isInteger(c.seed)||c.seed<0||c.seed>0xffffffff||c.expected!==undefined&&(!Number.isInteger(c.expected)||c.expected<0||c.expected>0xffffffff))throw Error('invalid CRC32 integer');if(!Array.isArray(c.chunks)||!c.chunks.length||c.chunks.length>32)throw Error('expected 1–32 chunks');for(const b of c.chunks){if(typeof b!=='string'||b.length>87384||Buffer.from(b,'base64').toString('base64')!==b)throw Error('expected canonical base64');const bytes=Buffer.from(b,'base64');if(bytes.length>65536)throw Error('chunk exceeds 64 KiB');total+=bytes.length;if(total>1024*1024)throw Error('native job exceeds 1 MiB');}}return cases;}
-export function validateNativeRecipe(r){exact(r,['schema','kind','id','profile','inputs','cases']);if(r.schema!==1||r.kind!=='native-component'||r.profile!==nativeProfile||typeof r.id!=='string'||!/^[a-z0-9][a-z0-9._-]{0,79}$/.test(r.id))throw Error('unsupported native component/profile');if(!Array.isArray(r.inputs)||r.inputs.length!==4)throw Error('profile requires library, header, types and license');const seen=new Set(),paths=[];for(const f of r.inputs){exact(f,['file','sha256','role']);pathName(f.file);if(!roles.includes(f.role)||seen.has(f.role)||!digest.test(f.sha256)||paths.some(p=>p===f.file||p.startsWith(f.file+'/')||f.file.startsWith(p+'/')))throw Error('invalid native input');seen.add(f.role);paths.push(f.file);}validateNativeCases(r.cases);return r;}
-async function ordinary(root,name,max=8*1024*1024){pathName(name);let file=root;const parts=name.split('/');for(const [i,part]of parts.entries()){file=join(file,part);const s=await lstat(file);if(s.isSymbolicLink()||(i<parts.length-1?!s.isDirectory():!s.isFile()))throw Error('non-ordinary native file: '+name);if(i===parts.length-1&&s.size>max)throw Error('native file exceeds limit');}return readFile(file);}
-async function pythonPath(path){if(typeof path!=='string'||!isAbsolute(path))throw Error('supply an absolute --python executable');const file=await realpath(path);if(!(await lstat(file)).isFile())throw Error('invalid Python executable');return file;}
-export function nativeEvidenceSummary(e,hash){const r=e?.normalized_result;if(e?.operation!=='inspect_binary_layout'||e.provider?.id!=='pwntools-elf'||e.subject?.digest?.sha256!==hash||r?.artifact?.sha256!==hash||r?.format!=='elf'||r.image_type!=='ET_DYN'||r.architecture?.machine!=='EM_X86_64'||r.architecture?.bits!==64||r.architecture?.byte_order!=='little')throw Error('REA evidence does not establish the requested ELF/ABI identity');
- const needed=r.linkage?.needed_libraries;if(!Array.isArray(needed)||needed.some(d=>d.unknown_reason||d.display!=='libc.so.6'))throw Error('native dependencies exceed the reviewed libc profile');const exports=[];for(const name of ['crc32','zlibVersion']){const candidates=r.symbols?.filter(s=>s.name?.display===name&&s.type==='STT_FUNC'&&s.binding==='STB_GLOBAL'&&s.visibility==='STV_DEFAULT'&&Number.isInteger(s.section_index)&&s.section_index>0&&s.value_meaning==='linked-virtual-address');if(!candidates?.length)throw Error('REA did not establish native export: '+name);exports.push({name,observations:candidates});}
- return {evidenceId:e.evidence_id,provider:e.provider,artifact:r.artifact,architecture:r.architecture,exports,neededLibraries:needed,diagnostics:r.diagnostics,limitations:[...(e.limitations??[]),'Symbol names establish neither C prototypes nor purity. The retained zlib headers define this reviewed ABI. Linked addresses are not runtime call addresses. Whole-library copying preserves relocation/dependency behavior; no function-body extraction is claimed.']};}
-export function nativeHeaderContract(header,types){const version=/#define\s+ZLIB_VERSION\s+"([0-9.]+)"/.exec(header)?.[1];if(!version||!/crc32\s*\(uLong crc, const Bytef \*buf, uInt len\)/.test(header)||!/const char \*\s*ZEXPORT\s+zlibVersion\(void\)/.test(header)||!/typedef\s+unsigned long\s+uLong\s*;/.test(types)||!/typedef\s+unsigned int\s+uInt\s*;/.test(types)||!/typedef\s+unsigned char\s+Byte\s*;/.test(types)||!/typedef\s+Byte\s+FAR\s+Bytef\s*;/.test(types))throw Error('retained headers do not establish reviewed zlib ABI');return version;}
-export async function prepareNativeComponent(recipeFile,inputRoot,{out,python}={}){
- const file=await realpath(resolve(recipeFile)),source=await realpath(resolve(inputRoot)),recipeBytes=await ordinary(dirname(file),basename(file),1024*1024),recipe=validateNativeRecipe(JSON.parse(recipeBytes)),interpreter=await pythonPath(python);if(process.platform!=='linux'||process.arch!=='x64')throw Error('native profile requires Linux x64');
- const inputs=[];for(const f of recipe.inputs){const bytes=await ordinary(source,f.file);if(sha256(bytes)!==f.sha256)throw Error('native source hash differs: '+f.file);inputs.push({...f,bytes});}const header=inputs.find(f=>f.role==='header').bytes.toString(),types=inputs.find(f=>f.role==='types').bytes.toString(),version=nativeHeaderContract(header,types);
- const dest=await newDestination(out,[source,dirname(file)]);if(inside(dest,source)||inside(dest,file))throw Error('output cannot contain native inputs');await mkdir(dirname(dest),{recursive:true});await mkdir(dest,{mode:0o700});
- try{const artifacts=[],save=async(name,bytes)=>{await mkdir(dirname(join(dest,name)),{recursive:true});await writeFile(join(dest,name),bytes,{flag:'wx',mode:0o600});artifacts.push({path:name,sha256:sha256(bytes),bytes:bytes.length});};await save('.native/recipe.json',recipeBytes);for(const f of inputs)await save('.native/inputs/'+f.file,f.bytes);const lib=inputs.find(f=>f.role==='library'),original=join(dest,'.native/inputs',lib.file);
- const evidencePath=join(dest,'.native/evidence/elf.json'),e=await runRea(['inspect-binary-layout',original],evidencePath,{maxBytes:8*1024*1024,environment:{REA_PWNTOOLS_PYTHON:python}}),evidence=nativeEvidenceSummary(e,lib.sha256);for(const name of ['.native/evidence/elf.json','.native/evidence/elf.json.stderr.log']){const bytes=await ordinary(dest,name);artifacts.push({path:name,sha256:sha256(bytes),bytes:bytes.length});}
- await save('recipient/libz.so',lib.bytes);await save('recipient/host.py',await readFile(fileURLToPath(new URL('./native/zlib-host.py',import.meta.url))));const state={schema:1,kind:'native-component-workspace',id:recipe.id,profile:nativeProfile,createdAt:new Date().toISOString(),source,recipeSha256:sha256(recipeBytes),librarySha256:lib.sha256,headerVersion:version,python:{requested:python,resolved:interpreter},rea:reaInfo(),evidence,artifacts,scope:'Exact copied zlib library, two reviewed C exports, libc supplied by the host. REA static layout plus separate ctypes execution; not arbitrary native reconstruction or a hostile-code sandbox.'};await saveJson(join(dest,'.native/workspace.json'),state);return {directory:dest,...state};
- }catch(error){await saveJson(join(dest,'PREPARE-FAILED.json'),{schema:1,message:error.message,scope:'Incomplete static preparation; no native calls were made. Evidence/logs retained when available.'}).catch(()=>{});throw error;}}
-async function load(directory){const root=await realpath(resolve(directory)),state=JSON.parse(await ordinary(root,'.native/workspace.json',1024*1024));if(state.schema!==1||state.kind!=='native-component-workspace'||state.profile!==nativeProfile||!Array.isArray(state.artifacts)||state.artifacts.length!==9)throw Error('invalid native workspace');const recipeBytes=await ordinary(root,'.native/recipe.json',1024*1024),recipe=validateNativeRecipe(JSON.parse(recipeBytes));if(state.id!==recipe.id||sha256(recipeBytes)!==state.recipeSha256||recipe.inputs.find(f=>f.role==='library').sha256!==state.librarySha256)throw Error('native recipe changed');const expected=['.native/recipe.json',...recipe.inputs.map(f=>'.native/inputs/'+f.file),'.native/evidence/elf.json','.native/evidence/elf.json.stderr.log','recipient/libz.so','recipient/host.py'];const paths=new Set();for(const f of state.artifacts){if(!expected.includes(f.path)||paths.has(f.path)||!digest.test(f.sha256))throw Error('invalid native artifact record');paths.add(f.path);const pinned=recipe.inputs.find(i=>'.native/inputs/'+i.file===f.path)?.sha256;if(pinned&&pinned!==f.sha256)throw Error('native provenance differs');if(f.path==='recipient/libz.so'&&f.sha256!==state.librarySha256)throw Error('native component identity differs');}return {root,state,recipe};}
-export async function nativeComponentStatus(directory){const x=await load(directory),files=[];for(const f of x.state.artifacts){let actual=null;try{actual=sha256(await ordinary(x.root,f.path));}catch(e){if(e.code!=='ENOENT')throw e;}files.push({path:f.path,expected:f.sha256,actual,clean:actual===f.sha256});}return {directory:x.root,id:x.state.id,profile:x.state.profile,clean:files.every(f=>f.clean),files};}
-export async function runNativeHost(python,script,job,{timeoutMs=5000}={}){if(!Number.isInteger(timeoutMs)||timeoutMs<100||timeoutMs>30000)throw Error('native deadline must be 100–30000 ms');const executable=await pythonPath(python);return new Promise(resolveJob=>{let stdout='',stderr='',bytes=0,failure=null,killTimer;const child=spawn(executable,['-I',script],{cwd:dirname(script),env:{PATH:'/usr/bin:/bin',LANG:'C.UTF-8'},stdio:['pipe','pipe','pipe']});const stop=message=>{failure??=message;child.kill('SIGTERM');killTimer??=setTimeout(()=>child.kill('SIGKILL'),300);};const timer=setTimeout(()=>stop('native host timed out'),timeoutMs);for(const [stream,key]of [[child.stdout,'stdout'],[child.stderr,'stderr']])stream.on('data',chunk=>{bytes+=chunk.length;if(bytes>262144){stop('native output exceeds limit');return;}if(key==='stdout')stdout+=chunk;else stderr+=chunk;});child.stdin.on('error',()=>{});child.on('error',e=>failure=e.message);child.on('close',(code,signal)=>{clearTimeout(timer);clearTimeout(killTimer);let result;try{result=JSON.parse(stdout);}catch{failure??='native host returned invalid JSON';}resolveJob({result:result??null,failure:failure??(code===0?null:'native host exited '+(signal??code)),log:stderr.slice(-8192)});});child.stdin.end(JSON.stringify(job));});}
-function validResult(worker,cases,library,version){const r=worker.result;return !worker.failure&&r?.kind==='results'&&r.library===library&&r.version===version&&Array.isArray(r.cases)&&r.cases.length===cases.length&&r.cases.every(n=>Number.isInteger(n)&&n>=0&&n<=0xffffffff)&&r.abi?.platform==='linux'&&r.abi?.machine==='x86_64'&&r.abi?.ulongBytes===8&&r.abi?.uintBytes===4;}
-async function ready(directory){const x=await load(directory);if(!(await nativeComponentStatus(x.root)).clean)throw Error('native workspace drift; execution refused');const envelope=JSON.parse(await ordinary(x.root,'.native/evidence/elf.json'));nativeEvidenceSummary(envelope.data,x.state.librarySha256);return x;}
-export async function verifyNativeComponent(directory,{python,timeoutMs=5000}={}){const x=await ready(directory),lib=x.recipe.inputs.find(f=>f.role==='library'),script=join(x.root,'recipient/host.py'),workers=[];for(const library of [join(x.root,'.native/inputs',lib.file),join(x.root,'recipient/libz.so')])workers.push(await runNativeHost(python,script,{library,sha256:x.state.librarySha256,cases:x.recipe.cases.map(({chunks,seed})=>({chunks,seed}))},{timeoutMs}));const cases=x.recipe.cases.map((c,i)=>{const reference=crc32Reference(c.chunks.map(b=>Buffer.from(b,'base64')),c.seed),donor=workers[0].result?.cases?.[i]??null,recipient=workers[1].result?.cases?.[i]??null;return {name:c.name,reference,donor,recipient,...(c.expected!==undefined?{expected:c.expected}:{}),passed:donor===reference&&recipient===reference&&(c.expected===undefined||c.expected===reference)};});const passed=workers.every((w,i)=>validResult(w,cases,i===0?join(x.root,'.native/inputs',lib.file):join(x.root,'recipient/libz.so'),x.state.headerVersion))&&cases.every(c=>c.passed);const report={schema:1,kind:'native-component-verification',at:new Date().toISOString(),workspace:x.root,profile:nativeProfile,librarySha256:x.state.librarySha256,recipeSha256:x.state.recipeSha256,evidenceId:x.state.evidence.evidenceId,passed,cases,workers,scope:x.state.scope};const runs=join(x.root,'.native/runs');await mkdir(runs,{recursive:true});if((await realpath(runs))!==runs)throw Error('native runs directory redirected');const out=join(runs,randomUUID()+'.json');await saveJson(out,report);return {reportPath:out,...report};}
-export async function nativeChecksum(directory,{python,inputRoot,files,out,timeoutMs=5000}={}){const x=await ready(directory),source=await realpath(resolve(inputRoot));if(!Array.isArray(files)||!files.length||files.length>16||new Set(files).size!==files.length)throw Error('choose 1–16 unique input files');const inputs=[];for(const file of files){const bytes=await ordinary(source,file,65536);inputs.push({file,bytes,sha256:sha256(bytes)});}const result=await runNativeHost(python,join(x.root,'recipient/host.py'),{library:join(x.root,'recipient/libz.so'),sha256:x.state.librarySha256,cases:inputs.map(f=>({chunks:[f.bytes.toString('base64')],seed:0}))},{timeoutMs});if(!validResult(result,inputs,join(x.root,'recipient/libz.so'),x.state.headerVersion))throw Error('native checksum host failed: '+(result.failure??JSON.stringify(result.result)));const rows=inputs.map((f,i)=>{if(result.result.cases[i]!==crc32Reference([f.bytes]))throw Error('native checksum differs from reference');return {file:f.file,bytes:f.bytes.length,sha256:f.sha256,crc32:result.result.cases[i].toString(16).padStart(8,'0')};});const report={schema:1,kind:'native-file-checksums',at:new Date().toISOString(),profile:nativeProfile,source,librarySha256:x.state.librarySha256,zlibVersion:result.result.version,files:rows,runtimeDependencies:result.result.runtimeDependencies};const dest=await newDestination(out,[x.root,source]);if(inside(dest,source)||inside(dest,x.root))throw Error('checksum output cannot contain inputs');await mkdir(dirname(dest),{recursive:true});await saveJson(dest,report);return {reportPath:dest,...report};}
+import { readFile, writeFile, mkdir, lstat, realpath } from 'node:fs/promises';
+import { resolve, join, dirname, isAbsolute, basename } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { spawn } from 'node:child_process';
+import { randomUUID } from 'node:crypto';
+import { safeRelative } from './research.js';
+import { sha256, inside, newDestination, saveJson } from './workspace.js';
+import { runRea, reaInfo } from './rea.js';
+export const nativeProfile = 'zlib-crc32-linux-x64-v1';
+const digest = /^[a-f0-9]{64}$/;
+const roles = ['library', 'header', 'types', 'license'];
+const exact = (o, keys) => {
+  if (!o || typeof o !== 'object' || Array.isArray(o) || Object.keys(o).some(k => !keys.includes(k)))
+    throw Error('unsupported native fields');
+};
+const pathName = n => {
+  safeRelative(n);
+  if (n.length > 500 || n.includes('\0')) throw Error('invalid native path');
+  return n;
+};
+export function crc32Reference(chunks, seed = 0) {
+  let value = (seed ^ 0xffffffff) >>> 0;
+  for (const chunk of chunks)
+    for (const byte of chunk) {
+      value ^= byte;
+      for (let bit = 0; bit < 8; bit++) value = (value >>> 1) ^ (value & 1 ? 0xedb88320 : 0);
+    }
+  return (value ^ 0xffffffff) >>> 0;
+}
+export function validateNativeCases(cases) {
+  if (!Array.isArray(cases) || !cases.length || cases.length > 32) throw Error('expected 1–32 native cases');
+  let total = 0;
+  const names = new Set();
+  for (const c of cases) {
+    exact(c, ['name', 'chunks', 'seed', 'expected']);
+    if (typeof c.name !== 'string' || !c.name || c.name.length > 160 || names.has(c.name))
+      throw Error('invalid/duplicate case name');
+    names.add(c.name);
+    if (
+      !Number.isInteger(c.seed) ||
+      c.seed < 0 ||
+      c.seed > 0xffffffff ||
+      (c.expected !== undefined && (!Number.isInteger(c.expected) || c.expected < 0 || c.expected > 0xffffffff))
+    )
+      throw Error('invalid CRC32 integer');
+    if (!Array.isArray(c.chunks) || !c.chunks.length || c.chunks.length > 32) throw Error('expected 1–32 chunks');
+    for (const b of c.chunks) {
+      if (typeof b !== 'string' || b.length > 87384 || Buffer.from(b, 'base64').toString('base64') !== b)
+        throw Error('expected canonical base64');
+      const bytes = Buffer.from(b, 'base64');
+      if (bytes.length > 65536) throw Error('chunk exceeds 64 KiB');
+      total += bytes.length;
+      if (total > 1024 * 1024) throw Error('native job exceeds 1 MiB');
+    }
+  }
+  return cases;
+}
+export function validateNativeRecipe(r) {
+  exact(r, ['schema', 'kind', 'id', 'profile', 'inputs', 'cases']);
+  if (
+    r.schema !== 1 ||
+    r.kind !== 'native-component' ||
+    r.profile !== nativeProfile ||
+    typeof r.id !== 'string' ||
+    !/^[a-z0-9][a-z0-9._-]{0,79}$/.test(r.id)
+  )
+    throw Error('unsupported native component/profile');
+  if (!Array.isArray(r.inputs) || r.inputs.length !== 4)
+    throw Error('profile requires library, header, types and license');
+  const seen = new Set(),
+    paths = [];
+  for (const f of r.inputs) {
+    exact(f, ['file', 'sha256', 'role']);
+    pathName(f.file);
+    if (
+      !roles.includes(f.role) ||
+      seen.has(f.role) ||
+      !digest.test(f.sha256) ||
+      paths.some(p => p === f.file || p.startsWith(f.file + '/') || f.file.startsWith(p + '/'))
+    )
+      throw Error('invalid native input');
+    seen.add(f.role);
+    paths.push(f.file);
+  }
+  validateNativeCases(r.cases);
+  return r;
+}
+async function ordinary(root, name, max = 8 * 1024 * 1024) {
+  pathName(name);
+  let file = root;
+  const parts = name.split('/');
+  for (const [i, part] of parts.entries()) {
+    file = join(file, part);
+    const s = await lstat(file);
+    if (s.isSymbolicLink() || (i < parts.length - 1 ? !s.isDirectory() : !s.isFile()))
+      throw Error('non-ordinary native file: ' + name);
+    if (i === parts.length - 1 && s.size > max) throw Error('native file exceeds limit');
+  }
+  return readFile(file);
+}
+async function pythonPath(path) {
+  if (typeof path !== 'string' || !isAbsolute(path)) throw Error('supply an absolute --python executable');
+  const file = await realpath(path);
+  if (!(await lstat(file)).isFile()) throw Error('invalid Python executable');
+  return file;
+}
+export function nativeEvidenceSummary(e, hash) {
+  const r = e?.normalized_result;
+  if (
+    e?.operation !== 'inspect_binary_layout' ||
+    e.provider?.id !== 'pwntools-elf' ||
+    e.subject?.digest?.sha256 !== hash ||
+    r?.artifact?.sha256 !== hash ||
+    r?.format !== 'elf' ||
+    r.image_type !== 'ET_DYN' ||
+    r.architecture?.machine !== 'EM_X86_64' ||
+    r.architecture?.bits !== 64 ||
+    r.architecture?.byte_order !== 'little'
+  )
+    throw Error('REA evidence does not establish the requested ELF/ABI identity');
+  const needed = r.linkage?.needed_libraries;
+  if (!Array.isArray(needed) || needed.some(d => d.unknown_reason || d.display !== 'libc.so.6'))
+    throw Error('native dependencies exceed the reviewed libc profile');
+  const exports = [];
+  for (const name of ['crc32', 'zlibVersion']) {
+    const candidates = r.symbols?.filter(
+      s =>
+        s.name?.display === name &&
+        s.type === 'STT_FUNC' &&
+        s.binding === 'STB_GLOBAL' &&
+        s.visibility === 'STV_DEFAULT' &&
+        Number.isInteger(s.section_index) &&
+        s.section_index > 0 &&
+        s.value_meaning === 'linked-virtual-address'
+    );
+    if (!candidates?.length) throw Error('REA did not establish native export: ' + name);
+    exports.push({ name, observations: candidates });
+  }
+  return {
+    evidenceId: e.evidence_id,
+    provider: e.provider,
+    artifact: r.artifact,
+    architecture: r.architecture,
+    exports,
+    neededLibraries: needed,
+    diagnostics: r.diagnostics,
+    limitations: [
+      ...(e.limitations ?? []),
+      'Symbol names establish neither C prototypes nor purity. The retained zlib headers define this reviewed ABI. Linked addresses are not runtime call addresses. Whole-library copying preserves relocation/dependency behavior; no function-body extraction is claimed.'
+    ]
+  };
+}
+export function nativeHeaderContract(header, types) {
+  const version = /#define\s+ZLIB_VERSION\s+"([0-9.]+)"/.exec(header)?.[1];
+  if (
+    !version ||
+    !/crc32\s*\(uLong crc, const Bytef \*buf, uInt len\)/.test(header) ||
+    !/const char \*\s*ZEXPORT\s+zlibVersion\(void\)/.test(header) ||
+    !/typedef\s+unsigned long\s+uLong\s*;/.test(types) ||
+    !/typedef\s+unsigned int\s+uInt\s*;/.test(types) ||
+    !/typedef\s+unsigned char\s+Byte\s*;/.test(types) ||
+    !/typedef\s+Byte\s+FAR\s+Bytef\s*;/.test(types)
+  )
+    throw Error('retained headers do not establish reviewed zlib ABI');
+  return version;
+}
+export async function prepareNativeComponent(recipeFile, inputRoot, { out, python } = {}) {
+  const file = await realpath(resolve(recipeFile)),
+    source = await realpath(resolve(inputRoot)),
+    recipeBytes = await ordinary(dirname(file), basename(file), 1024 * 1024),
+    recipe = validateNativeRecipe(JSON.parse(recipeBytes)),
+    interpreter = await pythonPath(python);
+  if (process.platform !== 'linux' || process.arch !== 'x64') throw Error('native profile requires Linux x64');
+  const inputs = [];
+  for (const f of recipe.inputs) {
+    const bytes = await ordinary(source, f.file);
+    if (sha256(bytes) !== f.sha256) throw Error('native source hash differs: ' + f.file);
+    inputs.push({ ...f, bytes });
+  }
+  const header = inputs.find(f => f.role === 'header').bytes.toString(),
+    types = inputs.find(f => f.role === 'types').bytes.toString(),
+    version = nativeHeaderContract(header, types);
+  const dest = await newDestination(out, [source, dirname(file)]);
+  if (inside(dest, source) || inside(dest, file)) throw Error('output cannot contain native inputs');
+  await mkdir(dirname(dest), { recursive: true });
+  await mkdir(dest, { mode: 0o700 });
+  try {
+    const artifacts = [],
+      save = async (name, bytes) => {
+        await mkdir(dirname(join(dest, name)), { recursive: true });
+        await writeFile(join(dest, name), bytes, { flag: 'wx', mode: 0o600 });
+        artifacts.push({ path: name, sha256: sha256(bytes), bytes: bytes.length });
+      };
+    await save('.native/recipe.json', recipeBytes);
+    for (const f of inputs) await save('.native/inputs/' + f.file, f.bytes);
+    const lib = inputs.find(f => f.role === 'library'),
+      original = join(dest, '.native/inputs', lib.file);
+    const evidencePath = join(dest, '.native/evidence/elf.json'),
+      e = await runRea(['inspect-binary-layout', original], evidencePath, {
+        maxBytes: 8 * 1024 * 1024,
+        environment: { REA_PWNTOOLS_PYTHON: python }
+      }),
+      evidence = nativeEvidenceSummary(e, lib.sha256);
+    for (const name of ['.native/evidence/elf.json', '.native/evidence/elf.json.stderr.log']) {
+      const bytes = await ordinary(dest, name);
+      artifacts.push({ path: name, sha256: sha256(bytes), bytes: bytes.length });
+    }
+    await save('recipient/libz.so', lib.bytes);
+    await save('recipient/host.py', await readFile(fileURLToPath(new URL('./native/zlib-host.py', import.meta.url))));
+    const state = {
+      schema: 1,
+      kind: 'native-component-workspace',
+      id: recipe.id,
+      profile: nativeProfile,
+      createdAt: new Date().toISOString(),
+      source,
+      recipeSha256: sha256(recipeBytes),
+      librarySha256: lib.sha256,
+      headerVersion: version,
+      python: { requested: python, resolved: interpreter },
+      rea: reaInfo(),
+      evidence,
+      artifacts,
+      scope:
+        'Exact copied zlib library, two reviewed C exports, libc supplied by the host. REA static layout plus separate ctypes execution; not arbitrary native reconstruction or a hostile-code sandbox.'
+    };
+    await saveJson(join(dest, '.native/workspace.json'), state);
+    return { directory: dest, ...state };
+  } catch (error) {
+    await saveJson(join(dest, 'PREPARE-FAILED.json'), {
+      schema: 1,
+      message: error.message,
+      scope: 'Incomplete static preparation; no native calls were made. Evidence/logs retained when available.'
+    }).catch(() => {});
+    throw error;
+  }
+}
+async function load(directory) {
+  const root = await realpath(resolve(directory)),
+    state = JSON.parse(await ordinary(root, '.native/workspace.json', 1024 * 1024));
+  if (
+    state.schema !== 1 ||
+    state.kind !== 'native-component-workspace' ||
+    state.profile !== nativeProfile ||
+    !Array.isArray(state.artifacts) ||
+    state.artifacts.length !== 9
+  )
+    throw Error('invalid native workspace');
+  const recipeBytes = await ordinary(root, '.native/recipe.json', 1024 * 1024),
+    recipe = validateNativeRecipe(JSON.parse(recipeBytes));
+  if (
+    state.id !== recipe.id ||
+    sha256(recipeBytes) !== state.recipeSha256 ||
+    recipe.inputs.find(f => f.role === 'library').sha256 !== state.librarySha256
+  )
+    throw Error('native recipe changed');
+  const expected = [
+    '.native/recipe.json',
+    ...recipe.inputs.map(f => '.native/inputs/' + f.file),
+    '.native/evidence/elf.json',
+    '.native/evidence/elf.json.stderr.log',
+    'recipient/libz.so',
+    'recipient/host.py'
+  ];
+  const paths = new Set();
+  for (const f of state.artifacts) {
+    if (!expected.includes(f.path) || paths.has(f.path) || !digest.test(f.sha256))
+      throw Error('invalid native artifact record');
+    paths.add(f.path);
+    const pinned = recipe.inputs.find(i => '.native/inputs/' + i.file === f.path)?.sha256;
+    if (pinned && pinned !== f.sha256) throw Error('native provenance differs');
+    if (f.path === 'recipient/libz.so' && f.sha256 !== state.librarySha256)
+      throw Error('native component identity differs');
+  }
+  return { root, state, recipe };
+}
+export async function nativeComponentStatus(directory) {
+  const x = await load(directory),
+    files = [];
+  for (const f of x.state.artifacts) {
+    let actual = null;
+    try {
+      actual = sha256(await ordinary(x.root, f.path));
+    } catch (e) {
+      if (e.code !== 'ENOENT') throw e;
+    }
+    files.push({ path: f.path, expected: f.sha256, actual, clean: actual === f.sha256 });
+  }
+  return { directory: x.root, id: x.state.id, profile: x.state.profile, clean: files.every(f => f.clean), files };
+}
+export async function runNativeHost(python, script, job, { timeoutMs = 5000 } = {}) {
+  if (!Number.isInteger(timeoutMs) || timeoutMs < 100 || timeoutMs > 30000)
+    throw Error('native deadline must be 100–30000 ms');
+  const executable = await pythonPath(python);
+  return new Promise(resolveJob => {
+    let stdout = '',
+      stderr = '',
+      bytes = 0,
+      failure = null,
+      killTimer;
+    const child = spawn(executable, ['-I', script], {
+      cwd: dirname(script),
+      env: { PATH: '/usr/bin:/bin', LANG: 'C.UTF-8' },
+      stdio: ['pipe', 'pipe', 'pipe']
+    });
+    const stop = message => {
+      failure ??= message;
+      child.kill('SIGTERM');
+      killTimer ??= setTimeout(() => child.kill('SIGKILL'), 300);
+    };
+    const timer = setTimeout(() => stop('native host timed out'), timeoutMs);
+    for (const [stream, key] of [
+      [child.stdout, 'stdout'],
+      [child.stderr, 'stderr']
+    ])
+      stream.on('data', chunk => {
+        bytes += chunk.length;
+        if (bytes > 262144) {
+          stop('native output exceeds limit');
+          return;
+        }
+        if (key === 'stdout') stdout += chunk;
+        else stderr += chunk;
+      });
+    child.stdin.on('error', () => {});
+    child.on('error', e => (failure = e.message));
+    child.on('close', (code, signal) => {
+      clearTimeout(timer);
+      clearTimeout(killTimer);
+      let result;
+      try {
+        result = JSON.parse(stdout);
+      } catch {
+        failure ??= 'native host returned invalid JSON';
+      }
+      resolveJob({
+        result: result ?? null,
+        failure: failure ?? (code === 0 ? null : 'native host exited ' + (signal ?? code)),
+        log: stderr.slice(-8192)
+      });
+    });
+    child.stdin.end(JSON.stringify(job));
+  });
+}
+function validResult(worker, cases, library, version) {
+  const r = worker.result;
+  return (
+    !worker.failure &&
+    r?.kind === 'results' &&
+    r.library === library &&
+    r.version === version &&
+    Array.isArray(r.cases) &&
+    r.cases.length === cases.length &&
+    r.cases.every(n => Number.isInteger(n) && n >= 0 && n <= 0xffffffff) &&
+    r.abi?.platform === 'linux' &&
+    r.abi?.machine === 'x86_64' &&
+    r.abi?.ulongBytes === 8 &&
+    r.abi?.uintBytes === 4
+  );
+}
+async function ready(directory) {
+  const x = await load(directory);
+  if (!(await nativeComponentStatus(x.root)).clean) throw Error('native workspace drift; execution refused');
+  const envelope = JSON.parse(await ordinary(x.root, '.native/evidence/elf.json'));
+  nativeEvidenceSummary(envelope.data, x.state.librarySha256);
+  return x;
+}
+export async function verifyNativeComponent(directory, { python, timeoutMs = 5000 } = {}) {
+  const x = await ready(directory),
+    lib = x.recipe.inputs.find(f => f.role === 'library'),
+    script = join(x.root, 'recipient/host.py'),
+    workers = [];
+  for (const library of [join(x.root, '.native/inputs', lib.file), join(x.root, 'recipient/libz.so')])
+    workers.push(
+      await runNativeHost(
+        python,
+        script,
+        { library, sha256: x.state.librarySha256, cases: x.recipe.cases.map(({ chunks, seed }) => ({ chunks, seed })) },
+        { timeoutMs }
+      )
+    );
+  const cases = x.recipe.cases.map((c, i) => {
+    const reference = crc32Reference(
+        c.chunks.map(b => Buffer.from(b, 'base64')),
+        c.seed
+      ),
+      donor = workers[0].result?.cases?.[i] ?? null,
+      recipient = workers[1].result?.cases?.[i] ?? null;
+    return {
+      name: c.name,
+      reference,
+      donor,
+      recipient,
+      ...(c.expected !== undefined ? { expected: c.expected } : {}),
+      passed: donor === reference && recipient === reference && (c.expected === undefined || c.expected === reference)
+    };
+  });
+  const passed =
+    workers.every((w, i) =>
+      validResult(
+        w,
+        cases,
+        i === 0 ? join(x.root, '.native/inputs', lib.file) : join(x.root, 'recipient/libz.so'),
+        x.state.headerVersion
+      )
+    ) && cases.every(c => c.passed);
+  const report = {
+    schema: 1,
+    kind: 'native-component-verification',
+    at: new Date().toISOString(),
+    workspace: x.root,
+    profile: nativeProfile,
+    librarySha256: x.state.librarySha256,
+    recipeSha256: x.state.recipeSha256,
+    evidenceId: x.state.evidence.evidenceId,
+    passed,
+    cases,
+    workers,
+    scope: x.state.scope
+  };
+  const runs = join(x.root, '.native/runs');
+  await mkdir(runs, { recursive: true });
+  if ((await realpath(runs)) !== runs) throw Error('native runs directory redirected');
+  const out = join(runs, randomUUID() + '.json');
+  await saveJson(out, report);
+  return { reportPath: out, ...report };
+}
+export async function nativeChecksum(directory, { python, inputRoot, files, out, timeoutMs = 5000 } = {}) {
+  const x = await ready(directory),
+    source = await realpath(resolve(inputRoot));
+  if (!Array.isArray(files) || !files.length || files.length > 16 || new Set(files).size !== files.length)
+    throw Error('choose 1–16 unique input files');
+  const inputs = [];
+  for (const file of files) {
+    const bytes = await ordinary(source, file, 65536);
+    inputs.push({ file, bytes, sha256: sha256(bytes) });
+  }
+  const result = await runNativeHost(
+    python,
+    join(x.root, 'recipient/host.py'),
+    {
+      library: join(x.root, 'recipient/libz.so'),
+      sha256: x.state.librarySha256,
+      cases: inputs.map(f => ({ chunks: [f.bytes.toString('base64')], seed: 0 }))
+    },
+    { timeoutMs }
+  );
+  if (!validResult(result, inputs, join(x.root, 'recipient/libz.so'), x.state.headerVersion))
+    throw Error('native checksum host failed: ' + (result.failure ?? JSON.stringify(result.result)));
+  const rows = inputs.map((f, i) => {
+    if (result.result.cases[i] !== crc32Reference([f.bytes])) throw Error('native checksum differs from reference');
+    return {
+      file: f.file,
+      bytes: f.bytes.length,
+      sha256: f.sha256,
+      crc32: result.result.cases[i].toString(16).padStart(8, '0')
+    };
+  });
+  const report = {
+    schema: 1,
+    kind: 'native-file-checksums',
+    at: new Date().toISOString(),
+    profile: nativeProfile,
+    source,
+    librarySha256: x.state.librarySha256,
+    zlibVersion: result.result.version,
+    files: rows,
+    runtimeDependencies: result.result.runtimeDependencies
+  };
+  const dest = await newDestination(out, [x.root, source]);
+  if (inside(dest, source) || inside(dest, x.root)) throw Error('checksum output cannot contain inputs');
+  await mkdir(dirname(dest), { recursive: true });
+  await saveJson(dest, report);
+  return { reportPath: dest, ...report };
+}

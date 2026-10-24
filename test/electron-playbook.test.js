@@ -1,19 +1,186 @@
-import {test} from 'node:test';
+import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import {mkdtemp,mkdir,writeFile,readFile,rm,chmod,stat,symlink} from 'node:fs/promises';
-import {tmpdir} from 'node:os';import {join} from 'node:path';
-import {planElectronPlaybook,applyElectronPlaybook,electronPlaybookStatus,rollbackElectronPlaybook,validateElectronPlaybook} from '../src/electron-playbook.js';
-import {sha256} from '../src/workspace.js';
-async function fixture(t){const dir=await mkdtemp(join(tmpdir(),'yoinkr-electron-'));t.after(()=>rm(dir,{recursive:true,force:true}));const source=join(dir,'source'),book=join(dir,'book'),out=join(dir,'out');await mkdir(join(source,'resources/app'),{recursive:true});await mkdir(book);
- const pkg={name:'fixture',version:'1.2.3',main:'main.cjs'};await writeFile(join(source,'resources/app/package.json'),JSON.stringify(pkg));
- const files=[];for(const [role,file]of [['main','main.cjs'],['preload','preload.cjs'],['renderer','ui/render.js'],['asset','ui/new/style.css']]){const before=role==='asset'?null:Buffer.from('original '+role),after=Buffer.from('new '+role);if(before){await mkdir(join(source,'resources/app',file,'..'),{recursive:true});await writeFile(join(source,'resources/app',file),before);await chmod(join(source,'resources/app',file),0o640);}await writeFile(join(book,role),after);files.push({role,file,payload:role,beforeSha256:before?sha256(before):null,afterSha256:sha256(after)});}
- const manifest={schema:1,kind:'electron-playbook',id:'fixture',target:{app:'resources/app',name:'fixture',version:'1.2.3',main:'main.cjs',type:'commonjs'},files};const recipe=join(book,'playbook.json');const save=()=>writeFile(recipe,JSON.stringify(manifest));await save();return {dir,source,book,out,manifest,recipe,save};}
-test('all roles plan, fresh copy, status, preview and rollback preserve originals, modes and unrelated data',async t=>{const x=await fixture(t),plan=await planElectronPlaybook(x.source,x.recipe);assert.equal(plan.files.length,4);assert.equal(plan.executesApplication,false);await assert.rejects(stat(x.out),{code:'ENOENT'});await applyElectronPlaybook(x.source,x.recipe,x.out);assert.equal((await electronPlaybookStatus(x.out)).clean,true);assert.equal(await readFile(join(x.source,'resources/app/main.cjs'),'utf8'),'original main');assert.equal((await stat(join(x.out,'runtime/resources/app/main.cjs'))).mode&0o777,0o640);await writeFile(join(x.out,'runtime/resources/app/ui/new/user.txt'),'keep');assert.equal((await rollbackElectronPlaybook(x.out,{dryRun:true})).status,'rollback-ready');assert.equal(await readFile(join(x.out,'runtime/resources/app/main.cjs'),'utf8'),'new main');const report=await rollbackElectronPlaybook(x.out);assert.equal(report.clean,true);assert.equal(report.status,'rolled-back');assert.equal(await readFile(join(x.out,'runtime/resources/app/main.cjs'),'utf8'),'original main');await assert.rejects(stat(join(x.out,'runtime/resources/app/ui/new/style.css')),{code:'ENOENT'});assert.equal(await readFile(join(x.out,'runtime/resources/app/ui/new/user.txt'),'utf8'),'keep');await assert.rejects(rollbackElectronPlaybook(x.out),/already/);});
-test('version, entry, package type, payload and recipient drift all fail before creating output',async t=>{for(const key of ['version','main','type']){const x=await fixture(t);x.manifest.target[key]='different';if(key==='type')x.manifest.target[key]='module';await x.save();await assert.rejects(applyElectronPlaybook(x.source,x.recipe,x.out),/differs/);await assert.rejects(stat(x.out),{code:'ENOENT'});}const x=await fixture(t);await writeFile(join(x.book,'main'),'tampered');await assert.rejects(planElectronPlaybook(x.source,x.recipe),/payload hash/);await writeFile(join(x.book,'main'),'new main');await writeFile(join(x.source,'resources/app/main.cjs'),'updated');await assert.rejects(applyElectronPlaybook(x.source,x.recipe,x.out),/recipient hash/);});
-test('rollback preflights every file and backup; drift leaves every other file alone',async t=>{const x=await fixture(t);await applyElectronPlaybook(x.source,x.recipe,x.out);const file=join(x.out,'runtime/resources/app/preload.cjs');await writeFile(file,'user edit');assert.equal((await electronPlaybookStatus(x.out)).clean,false);await assert.rejects(rollbackElectronPlaybook(x.out),/modified recipient/);assert.equal(await readFile(join(x.out,'runtime/resources/app/main.cjs'),'utf8'),'new main');await writeFile(file,'new preload');await writeFile(join(x.out,'.modkit-playbook/before/1'),'bad backup');await assert.rejects(rollbackElectronPlaybook(x.out),/backup hash/);assert.equal(await readFile(join(x.out,'runtime/resources/app/main.cjs'),'utf8'),'new main');});
-test('refuses symlink payloads, target parents, external runtime links and original/occupied outputs',async t=>{const x=await fixture(t);await rm(join(x.book,'main'));await symlink(join(x.book,'preload'),join(x.book,'main'));await assert.rejects(planElectronPlaybook(x.source,x.recipe),/non-ordinary/);await rm(join(x.book,'main'));await writeFile(join(x.book,'main'),'new main');await symlink(x.book,join(x.source,'external'));await assert.rejects(applyElectronPlaybook(x.source,x.recipe,x.out),/external/);await rm(join(x.source,'external'));await assert.rejects(applyElectronPlaybook(x.source,x.recipe,join(x.source,'copy')),/outside/);await mkdir(x.out);await writeFile(join(x.out,'keep'),'safe');await assert.rejects(applyElectronPlaybook(x.source,x.recipe,x.out),{code:'EEXIST'});assert.equal(await readFile(join(x.out,'keep'),'utf8'),'safe');await rm(join(x.source,'resources/app/ui'),{recursive:true});await symlink(x.book,join(x.source,'resources/app/ui'));await assert.rejects(planElectronPlaybook(x.source,x.recipe),/non-ordinary/);});
-test('strict declarative schema rejects traversal, duplicate targets, invalid roles and unpinned changes',async t=>{const x=await fixture(t);for(const patch of [{file:'../escape'},{file:'/absolute'},{role:'execute'},{beforeSha256:'*'},{payload:'../../escape'}]){const m=structuredClone(x.manifest);Object.assign(m.files[0],patch);assert.throws(()=>validateElectronPlaybook(m));}const m=structuredClone(x.manifest);m.files.push(m.files[0]);assert.throws(()=>validateElectronPlaybook(m),/duplicate/);});
-test('rollback rejects redirected workspace and backup directories',async t=>{const x=await fixture(t);await applyElectronPlaybook(x.source,x.recipe,x.out);await rm(join(x.out,'.modkit-playbook/before'),{recursive:true});await symlink(x.book,join(x.out,'.modkit-playbook/before'));await assert.rejects(rollbackElectronPlaybook(x.out),/non-ordinary/);assert.equal(await readFile(join(x.out,'runtime/resources/app/main.cjs'),'utf8'),'new main');});
-test('internal runtime symlinks remain internal to the copied runtime',async t=>{const x=await fixture(t);await symlink('resources/app/main.cjs',join(x.source,'entry-link'));await applyElectronPlaybook(x.source,x.recipe,x.out);assert.equal(await readFile(join(x.out,'runtime/entry-link'),'utf8'),'new main');});
-test('package drift prevents rollback even when patched files remain clean',async t=>{const x=await fixture(t);await applyElectronPlaybook(x.source,x.recipe,x.out);await writeFile(join(x.out,'runtime/resources/app/package.json'),'{}');assert.equal((await electronPlaybookStatus(x.out)).clean,false);await assert.rejects(rollbackElectronPlaybook(x.out),/package changed/);assert.equal(await readFile(join(x.out,'runtime/resources/app/main.cjs'),'utf8'),'new main');});
-test('explicit package entry-point hooks are tracked and restored along with newly mounted code',async t=>{const x=await fixture(t),file=join(x.source,'resources/app/package.json'),before=await readFile(file),after=Buffer.from(JSON.stringify({name:'fixture',version:'1.2.3',main:'bootstrap.cjs'})),bootstrap=Buffer.from("require('./main.cjs');\n");await writeFile(join(x.book,'package'),after);await writeFile(join(x.book,'bootstrap'),bootstrap);x.manifest.files.push({role:'main',file:'package.json',payload:'package',beforeSha256:sha256(before),afterSha256:sha256(after)},{role:'main',file:'bootstrap.cjs',payload:'bootstrap',beforeSha256:null,afterSha256:sha256(bootstrap)});await x.save();await applyElectronPlaybook(x.source,x.recipe,x.out);assert.equal((await electronPlaybookStatus(x.out)).clean,true);assert.equal(JSON.parse(await readFile(join(x.out,'runtime/resources/app/package.json'))).main,'bootstrap.cjs');assert.equal((await rollbackElectronPlaybook(x.out)).clean,true);assert.deepEqual(await readFile(join(x.out,'runtime/resources/app/package.json')),before);await assert.rejects(stat(join(x.out,'runtime/resources/app/bootstrap.cjs')),{code:'ENOENT'});});
+import { mkdtemp, mkdir, writeFile, readFile, rm, chmod, stat, symlink } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import {
+  planElectronPlaybook,
+  applyElectronPlaybook,
+  electronPlaybookStatus,
+  rollbackElectronPlaybook,
+  validateElectronPlaybook
+} from '../src/electron-playbook.js';
+import { sha256 } from '../src/workspace.js';
+async function fixture(t) {
+  const dir = await mkdtemp(join(tmpdir(), 'yoinkr-electron-'));
+  t.after(() => rm(dir, { recursive: true, force: true }));
+  const source = join(dir, 'source'),
+    book = join(dir, 'book'),
+    out = join(dir, 'out');
+  await mkdir(join(source, 'resources/app'), { recursive: true });
+  await mkdir(book);
+  const pkg = { name: 'fixture', version: '1.2.3', main: 'main.cjs' };
+  await writeFile(join(source, 'resources/app/package.json'), JSON.stringify(pkg));
+  const files = [];
+  for (const [role, file] of [
+    ['main', 'main.cjs'],
+    ['preload', 'preload.cjs'],
+    ['renderer', 'ui/render.js'],
+    ['asset', 'ui/new/style.css']
+  ]) {
+    const before = role === 'asset' ? null : Buffer.from('original ' + role),
+      after = Buffer.from('new ' + role);
+    if (before) {
+      await mkdir(join(source, 'resources/app', file, '..'), { recursive: true });
+      await writeFile(join(source, 'resources/app', file), before);
+      await chmod(join(source, 'resources/app', file), 0o640);
+    }
+    await writeFile(join(book, role), after);
+    files.push({ role, file, payload: role, beforeSha256: before ? sha256(before) : null, afterSha256: sha256(after) });
+  }
+  const manifest = {
+    schema: 1,
+    kind: 'electron-playbook',
+    id: 'fixture',
+    target: { app: 'resources/app', name: 'fixture', version: '1.2.3', main: 'main.cjs', type: 'commonjs' },
+    files
+  };
+  const recipe = join(book, 'playbook.json');
+  const save = () => writeFile(recipe, JSON.stringify(manifest));
+  await save();
+  return { dir, source, book, out, manifest, recipe, save };
+}
+test('all roles plan, fresh copy, status, preview and rollback preserve originals, modes and unrelated data', async t => {
+  const x = await fixture(t),
+    plan = await planElectronPlaybook(x.source, x.recipe);
+  assert.equal(plan.files.length, 4);
+  assert.equal(plan.executesApplication, false);
+  await assert.rejects(stat(x.out), { code: 'ENOENT' });
+  await applyElectronPlaybook(x.source, x.recipe, x.out);
+  assert.equal((await electronPlaybookStatus(x.out)).clean, true);
+  assert.equal(await readFile(join(x.source, 'resources/app/main.cjs'), 'utf8'), 'original main');
+  assert.equal((await stat(join(x.out, 'runtime/resources/app/main.cjs'))).mode & 0o777, 0o640);
+  await writeFile(join(x.out, 'runtime/resources/app/ui/new/user.txt'), 'keep');
+  assert.equal((await rollbackElectronPlaybook(x.out, { dryRun: true })).status, 'rollback-ready');
+  assert.equal(await readFile(join(x.out, 'runtime/resources/app/main.cjs'), 'utf8'), 'new main');
+  const report = await rollbackElectronPlaybook(x.out);
+  assert.equal(report.clean, true);
+  assert.equal(report.status, 'rolled-back');
+  assert.equal(await readFile(join(x.out, 'runtime/resources/app/main.cjs'), 'utf8'), 'original main');
+  await assert.rejects(stat(join(x.out, 'runtime/resources/app/ui/new/style.css')), { code: 'ENOENT' });
+  assert.equal(await readFile(join(x.out, 'runtime/resources/app/ui/new/user.txt'), 'utf8'), 'keep');
+  await assert.rejects(rollbackElectronPlaybook(x.out), /already/);
+});
+test('version, entry, package type, payload and recipient drift all fail before creating output', async t => {
+  for (const key of ['version', 'main', 'type']) {
+    const x = await fixture(t);
+    x.manifest.target[key] = 'different';
+    if (key === 'type') x.manifest.target[key] = 'module';
+    await x.save();
+    await assert.rejects(applyElectronPlaybook(x.source, x.recipe, x.out), /differs/);
+    await assert.rejects(stat(x.out), { code: 'ENOENT' });
+  }
+  const x = await fixture(t);
+  await writeFile(join(x.book, 'main'), 'tampered');
+  await assert.rejects(planElectronPlaybook(x.source, x.recipe), /payload hash/);
+  await writeFile(join(x.book, 'main'), 'new main');
+  await writeFile(join(x.source, 'resources/app/main.cjs'), 'updated');
+  await assert.rejects(applyElectronPlaybook(x.source, x.recipe, x.out), /recipient hash/);
+});
+test('rollback preflights every file and backup; drift leaves every other file alone', async t => {
+  const x = await fixture(t);
+  await applyElectronPlaybook(x.source, x.recipe, x.out);
+  const file = join(x.out, 'runtime/resources/app/preload.cjs');
+  await writeFile(file, 'user edit');
+  assert.equal((await electronPlaybookStatus(x.out)).clean, false);
+  await assert.rejects(rollbackElectronPlaybook(x.out), /modified recipient/);
+  assert.equal(await readFile(join(x.out, 'runtime/resources/app/main.cjs'), 'utf8'), 'new main');
+  await writeFile(file, 'new preload');
+  await writeFile(join(x.out, '.modkit-playbook/before/1'), 'bad backup');
+  await assert.rejects(rollbackElectronPlaybook(x.out), /backup hash/);
+  assert.equal(await readFile(join(x.out, 'runtime/resources/app/main.cjs'), 'utf8'), 'new main');
+});
+test('refuses symlink payloads, target parents, external runtime links and original/occupied outputs', async t => {
+  const x = await fixture(t);
+  await rm(join(x.book, 'main'));
+  await symlink(join(x.book, 'preload'), join(x.book, 'main'));
+  await assert.rejects(planElectronPlaybook(x.source, x.recipe), /non-ordinary/);
+  await rm(join(x.book, 'main'));
+  await writeFile(join(x.book, 'main'), 'new main');
+  await symlink(x.book, join(x.source, 'external'));
+  await assert.rejects(applyElectronPlaybook(x.source, x.recipe, x.out), /external/);
+  await rm(join(x.source, 'external'));
+  await assert.rejects(applyElectronPlaybook(x.source, x.recipe, join(x.source, 'copy')), /outside/);
+  await mkdir(x.out);
+  await writeFile(join(x.out, 'keep'), 'safe');
+  await assert.rejects(applyElectronPlaybook(x.source, x.recipe, x.out), { code: 'EEXIST' });
+  assert.equal(await readFile(join(x.out, 'keep'), 'utf8'), 'safe');
+  await rm(join(x.source, 'resources/app/ui'), { recursive: true });
+  await symlink(x.book, join(x.source, 'resources/app/ui'));
+  await assert.rejects(planElectronPlaybook(x.source, x.recipe), /non-ordinary/);
+});
+test('strict declarative schema rejects traversal, duplicate targets, invalid roles and unpinned changes', async t => {
+  const x = await fixture(t);
+  for (const patch of [
+    { file: '../escape' },
+    { file: '/absolute' },
+    { role: 'execute' },
+    { beforeSha256: '*' },
+    { payload: '../../escape' }
+  ]) {
+    const m = structuredClone(x.manifest);
+    Object.assign(m.files[0], patch);
+    assert.throws(() => validateElectronPlaybook(m));
+  }
+  const m = structuredClone(x.manifest);
+  m.files.push(m.files[0]);
+  assert.throws(() => validateElectronPlaybook(m), /duplicate/);
+});
+test('rollback rejects redirected workspace and backup directories', async t => {
+  const x = await fixture(t);
+  await applyElectronPlaybook(x.source, x.recipe, x.out);
+  await rm(join(x.out, '.modkit-playbook/before'), { recursive: true });
+  await symlink(x.book, join(x.out, '.modkit-playbook/before'));
+  await assert.rejects(rollbackElectronPlaybook(x.out), /non-ordinary/);
+  assert.equal(await readFile(join(x.out, 'runtime/resources/app/main.cjs'), 'utf8'), 'new main');
+});
+test('internal runtime symlinks remain internal to the copied runtime', async t => {
+  const x = await fixture(t);
+  await symlink('resources/app/main.cjs', join(x.source, 'entry-link'));
+  await applyElectronPlaybook(x.source, x.recipe, x.out);
+  assert.equal(await readFile(join(x.out, 'runtime/entry-link'), 'utf8'), 'new main');
+});
+test('package drift prevents rollback even when patched files remain clean', async t => {
+  const x = await fixture(t);
+  await applyElectronPlaybook(x.source, x.recipe, x.out);
+  await writeFile(join(x.out, 'runtime/resources/app/package.json'), '{}');
+  assert.equal((await electronPlaybookStatus(x.out)).clean, false);
+  await assert.rejects(rollbackElectronPlaybook(x.out), /package changed/);
+  assert.equal(await readFile(join(x.out, 'runtime/resources/app/main.cjs'), 'utf8'), 'new main');
+});
+test('explicit package entry-point hooks are tracked and restored along with newly mounted code', async t => {
+  const x = await fixture(t),
+    file = join(x.source, 'resources/app/package.json'),
+    before = await readFile(file),
+    after = Buffer.from(JSON.stringify({ name: 'fixture', version: '1.2.3', main: 'bootstrap.cjs' })),
+    bootstrap = Buffer.from("require('./main.cjs');\n");
+  await writeFile(join(x.book, 'package'), after);
+  await writeFile(join(x.book, 'bootstrap'), bootstrap);
+  x.manifest.files.push(
+    {
+      role: 'main',
+      file: 'package.json',
+      payload: 'package',
+      beforeSha256: sha256(before),
+      afterSha256: sha256(after)
+    },
+    { role: 'main', file: 'bootstrap.cjs', payload: 'bootstrap', beforeSha256: null, afterSha256: sha256(bootstrap) }
+  );
+  await x.save();
+  await applyElectronPlaybook(x.source, x.recipe, x.out);
+  assert.equal((await electronPlaybookStatus(x.out)).clean, true);
+  assert.equal(JSON.parse(await readFile(join(x.out, 'runtime/resources/app/package.json'))).main, 'bootstrap.cjs');
+  assert.equal((await rollbackElectronPlaybook(x.out)).clean, true);
+  assert.deepEqual(await readFile(join(x.out, 'runtime/resources/app/package.json')), before);
+  await assert.rejects(stat(join(x.out, 'runtime/resources/app/bootstrap.cjs')), { code: 'ENOENT' });
+});

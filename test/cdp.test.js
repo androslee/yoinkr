@@ -9,7 +9,7 @@ function client(handler) {
 }
 
 test('rpc calls are matched by id', async () => {
-  const { cdp, transport } = client((req) => {
+  const { cdp, transport } = client(req => {
     if (req.method === 'Target.getTargets') return { result: { targetInfos: [{ targetId: 'T1', type: 'page' }] } };
     return null;
   });
@@ -24,7 +24,7 @@ test('a CDP error rejects the call', async () => {
 });
 
 test('attachToTarget sends flatten and threads the sessionId through', async () => {
-  const { cdp, transport } = client((req) => {
+  const { cdp, transport } = client(req => {
     if (req.method === 'Target.attachToTarget') {
       assert.equal(req.params.flatten, true);
       return { result: { sessionId: 'S1' } };
@@ -58,14 +58,14 @@ test('evaluate surfaces an exception thrown by the mod', async () => {
 
 test('waitForTarget polls until the page appears', async () => {
   let calls = 0;
-  const { cdp } = client((req) => {
+  const { cdp } = client(req => {
     if (req.method === 'Target.getTargets') {
       calls++;
       return { result: { targetInfos: calls < 3 ? [] : [{ targetId: 'T2', type: 'page', url: 'file:///a' }] } };
     }
     return null;
   });
-  const target = await cdp.waitForTarget((t) => t.type === 'page', { intervalMs: 5, timeoutMs: 2000 });
+  const target = await cdp.waitForTarget(t => t.type === 'page', { intervalMs: 5, timeoutMs: 2000 });
   assert.equal(target.targetId, 'T2');
   assert.equal(calls, 3);
   assert.equal(await cdp.waitForTarget(() => false, { intervalMs: 5, timeoutMs: 50 }), null);
