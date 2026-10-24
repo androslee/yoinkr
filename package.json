@@ -113,5 +113,13 @@
     "mqtt": "5.14.1",
     "prettier": "3.9.10",
     "sha1": "1.1.1"
+  },
+  "peerDependencies": {
+    "playwright": ">=1.40.0"
+  },
+  "peerDependenciesMeta": {
+    "playwright": {
+      "optional": true
+    }
   }
 }
