@@ -9,6 +9,16 @@
 - Invocation: local Node subprocess, no shell interpolation, bounded runtime/output, retained output and stderr logs. It does not run `rea setup` or change any agent registration.
 - This wrapper currently implements the JS/Electron/ASAR analysis slice. REA offers more providers; Yoinkr has not integrated all of them yet.
 
+## Known upstream dependency issues
+
+Recorded here rather than worked around, because neither is this project's code
+and both are better fixed upstream. Reviewed 2026-10-24 against v0.30.0.
+
+| Issue | Path | Status |
+| --- | --- | --- |
+| 8 npm advisories (4 high, 4 moderate) | `rea-agents@6.7.0` -> `zod` | Waiting on a `zod` bump in `rea-agents`. CI gates `npm audit` at `--audit-level=critical`; tighten it to `high` once resolved. |
+| Prerelease in the tree | `rea-agents@6.7.0` -> `incur@0.6.1` -> `@modelcontextprotocol/server@2.0.0-alpha.4` | The direct dependency is the released 2.3.1; only `incur` pulls the alpha. An `overrides` entry would force 2.3.1, but nothing in this repository exercises `incur`, so that change cannot be validated here. |
+
 ## Universal Modder — workflow and route reference
 
 - Official project: https://github.com/rehan-remade/universal-modder
