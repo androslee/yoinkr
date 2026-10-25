@@ -38,6 +38,7 @@ import { loadManifest } from './manifest.js';
 import { computeState, makePin, checkDrift } from './drift.js';
 import { loadState, saveState, explain } from './safemode.js';
 import { buildPlan, launch } from './launcher.js';
+import { YOINKR_VERSION } from './version.js';
 
 const USAGE = `yoinkr — REA-backed application investigation and feature transfer
 
@@ -109,6 +110,10 @@ Mods are read from $YOINKR_HOME/mods (default ~/.yoinkr/mods; existing ~/.modkit
 Existing app installations are preserved. Loader mods use CDP; integration writes new working copies.`;
 
 const args = process.argv.slice(2);
+if (args.length === 1 && ['--version', '-v'].includes(args[0])) {
+  console.log(YOINKR_VERSION);
+  process.exit(0);
+}
 const command = args[0];
 const positional = [];
 const flags = {

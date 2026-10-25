@@ -11,12 +11,15 @@
 
 ## Known upstream dependency issues
 
-Recorded here rather than worked around, because neither is this project's code
-and both are better fixed upstream. Reviewed 2026-10-24 against v0.30.0.
+External advisories and compatibility choices are recorded here. Local overrides
+are pinned and retained only with compatibility checks. Reviewed 2026-10-24 against
+v0.30.0.
 
 | Issue | Path | Status |
 | --- | --- | --- |
-| 8 npm advisories (4 high, 4 moderate) | `rea-agents@6.7.0` -> `zod` | Waiting on a `zod` bump in `rea-agents`. CI gates `npm audit` at `--audit-level=critical`; tighten it to `high` once resolved. |
+| High severity advisory | `rea-agents@6.7.0` pins `zod@4.4.3` | Yoinkr overrides Zod to `4.6.6`, a patched same-major release. Yoinkr's full tests and real REA analysis smoke pass with the override. Remove it when REA updates its exact pin. CI gates high advisories. |
+| 3 moderate advisories | `aedes@0.51.3` -> `hyperid` -> `uuid` | Aedes is used only by local tests/demos. npm offers a fix in `aedes@1.2.0`, which is a major upgrade; assess its API before adopting it. |
+| Resolved advisories | `dompurify`, `markdown-it`, and `fast-uri` | Updated to `dompurify@3.4.17`, `markdown-it@14.3.3`, and patched `fast-uri` in the lockfile. |
 | Prerelease in the tree | `rea-agents@6.7.0` -> `incur@0.6.1` -> `@modelcontextprotocol/server@2.0.0-alpha.4` | The direct dependency is the released 2.3.1; only `incur` pulls the alpha. An `overrides` entry would force 2.3.1, but nothing in this repository exercises `incur`, so that change cannot be validated here. |
 
 ## Universal Modder — workflow and route reference

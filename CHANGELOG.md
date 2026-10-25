@@ -13,6 +13,12 @@ history left behind. Entries start at the first public release.
 
 ### Fixed
 
+- `yoinkr --version` and `yoinkr -v` now print the package version.
+- Updated `dompurify` and `markdown-it` to patched releases for reported high-severity
+  advisories, and refreshed the vulnerable `fast-uri` lockfile entry. Remaining npm audit
+  findings are documented in `docs/UPSTREAMS.md`.
+- Pinned a same-major Zod override for REA to resolve its high-severity advisory while
+  upstream retains an exact vulnerable pin.
 - Path-containment guards compared a canonicalized path against a non-canonicalized
   root, so on macOS -- where the system temp directory is reached through a symlink --
   they silently passed. Affected `newDestination`, `containedFile` and the primary

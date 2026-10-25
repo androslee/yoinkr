@@ -114,10 +114,9 @@ jobs:
         run: npm run test:research
 
   audit:
-    # Gates on critical advisories only. The tree currently carries 4 high and 4 moderate
-    # advisories, all transitive through the pinned rea-agents -> zod; gating on `high`
-    # today would mean a permanently red build for an upstream issue. Tighten this to
-    # --audit-level=high once rea-agents ships a zod bump.
+    # Gates on high advisories. The pinned rea-agents -> zod version has a documented,
+    # tested same-major override. Remaining moderate advisories come through Aedes, used
+    # only for local tests/demos, and need a major upgrade for a fix.
     name: dependency audit
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -133,7 +132,7 @@ jobs:
           node-version: '26'
 
       - name: npm audit
-        run: npm audit --audit-level=critical
+        run: npm audit --audit-level=high
 
       # package-lock.json pins every dependency with an integrity hash. `npm ci` already
       # refuses a lockfile that disagrees with package.json; this makes a hand-edited or

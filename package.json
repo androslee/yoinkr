@@ -100,19 +100,24 @@
     "@jridgewell/trace-mapping": "0.3.31",
     "@modelcontextprotocol/server": "2.3.1",
     "rea-agents": "6.7.0",
-    "zod": "4.4.3"
+    "zod": "4.6.6"
   },
   "devDependencies": {
     "@electron/asar": "4.2.0",
     "@modelcontextprotocol/client": "2.3.1",
     "aedes": "0.51.3",
-    "dompurify": "3.3.0",
+    "dompurify": "3.4.17",
     "esbuild": "0.25.12",
     "js-base64": "3.7.8",
-    "markdown-it": "14.1.0",
+    "markdown-it": "14.3.3",
     "mqtt": "5.14.1",
     "prettier": "3.9.10",
     "sha1": "1.1.1"
+  },
+  "overrides": {
+    "rea-agents": {
+      "zod": "4.6.6"
+    }
   },
   "peerDependencies": {
     "playwright": ">=1.40.0"
