@@ -17,6 +17,7 @@ Self-contained example projects such as Krita → OBS and Screenity → Firefox 
 
 ```sh
 npm test
+npm run doctor
 npm run check:repository
 npm run test:agent
 ```
@@ -40,6 +41,11 @@ PLAYWRIGHT_MODULE=/path/to/playwright/index.mjs npm run test:wizard
 Without either, these scripts fail with `ERR_MODULE_NOT_FOUND: Cannot find package
 'playwright'`. That is expected, not a broken checkout.
 
+Run `node src/cli.js doctor --json` to discover core and optional dependencies without
+executing them. For the Firefox example use `--example screenity-firefox --firefox
+/path/to/Firefox`; a nonzero exit status means a required prerequisite is missing.
+The doctor does not download dependencies, launch browsers or validate SDK ABI.
+
 ## Checks that run in CI
 
 Only the self-contained checks are gated, because everything else needs third-party
@@ -52,6 +58,12 @@ application inputs that are not in this repository:
 | `npm run test:agent` | Agent and MCP client, synthetic fixtures |
 | `npm run test:research` | Investigation and research flow, synthetic fixtures |
 | `npm run format:check` | Prettier |
+
+The separate **Example source build** workflow acquires hash-pinned Screenity
+modules, builds and lints the extension on Linux/macOS when its source changes.
+Native browser startup/capture still requires the example's explicit verification.
+The manual **Windows core portability** workflow runs only core delivery checks;
+see [release handoff](../docs/RELEASE_CHECKLIST.md).
 
 ## Not wired to an npm command
 

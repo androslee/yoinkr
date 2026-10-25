@@ -3,7 +3,7 @@ import {createHash,randomUUID} from 'node:crypto';
 import {fileURLToPath} from 'node:url';
 import {join,dirname,resolve} from 'node:path';
 import {build} from 'esbuild';
-import {firefoxExecutable,portableFirefoxDirectory} from './firefox-path.mjs';
+import {preparePortableFirefox} from './firefox-path.mjs';
 
 const root=dirname(fileURLToPath(import.meta.url));
 const recipe=JSON.parse(await readFile(join(root,'recipe.json')));
@@ -32,18 +32,8 @@ try{
   await rename(stage,join(local,'demo'));
 }finally{await rm(stage,{recursive:true,force:true});}
 if(process.argv[2]){
-  const supplied=resolve(process.argv[2]);
-  if(!(await stat(supplied)).isDirectory())throw new Error('Supply the EXTRACTED Firefox application directory, not an installer or launcher script.');
-  if(process.platform==='darwin'&&!supplied.endsWith('.app'))throw new Error('On macOS, supply the Firefox application bundle, for example /Applications/Firefox.app.');
-  await stat(firefoxExecutable(supplied));
-  const destination=portableFirefoxDirectory(local);
-  try{await stat(destination);console.log('Keeping existing portable Firefox copy.');}
-  catch(error){
-    if(error.code!=='ENOENT')throw error;
-    await mkdir(dirname(destination),{recursive:true});
-    // Keep symlinks as symlinks inside a macOS bundle so its code signature stays valid.
-    await cp(supplied,destination,process.platform==='darwin'?{recursive:true,verbatimSymlinks:true}:{recursive:true,dereference:true});
-  }
+  const result=await preparePortableFirefox(process.argv[2],local);
+  if(!result.copied)console.log('Keeping existing portable Firefox copy.');
 }
 console.log('Built .local/demo with original sources, license, provenance and Firefox extension.');
 console.log('Run npm start. Pass an extracted Firefox directory to build.mjs to create a portable browser copy.');

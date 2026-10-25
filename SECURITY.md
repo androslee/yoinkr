@@ -6,7 +6,7 @@ Please report security issues privately through
 [GitHub private vulnerability reporting](https://github.com/androslee/yoinkr/security/advisories/new)
 rather than opening a public issue.
 
-Include the Yoinkr version (the `version` field in `package.json`), your operating
+Include the Yoinkr version (`yoinkr --version` or the `version` field in `package.json`), your operating
 system and Node version, the command or API involved, and the smallest input that
 reproduces the problem. If a proof of concept writes outside its workspace or
 reaches a real application install, say so explicitly so it is not run casually.

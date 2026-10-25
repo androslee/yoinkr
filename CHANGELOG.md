@@ -13,6 +13,13 @@ history left behind. Entries start at the first public release.
 
 ### Fixed
 
+- Upgraded Aedes to 1.2.0 and adopted its asynchronous broker initialization,
+  resolving the remaining moderate UUID dependency findings.
+- Added regression checks for full macOS Firefox bundle copies and fresh unbuilt
+  example startup. Incomplete existing portable copies are refused before overwriting.
+- Updated the Firefox example to Fabric 7.4.0, with a host-only scene-coordinate
+  adapter for unchanged Screenity tools. A fresh build passed real headless Firefox
+  drawing/history/recording checks. Its remaining web-ext tooling advisory is documented.
 - `yoinkr --version` and `yoinkr -v` now print the package version.
 - Updated `dompurify` and `markdown-it` to patched releases for reported high-severity
   advisories, and refreshed the vulnerable `fast-uri` lockfile entry. Remaining npm audit
@@ -31,6 +38,12 @@ history left behind. Entries start at the first public release.
 
 ### Added
 
+- `yoinkr doctor` / `npm run doctor` provide read-only prerequisite diagnostics,
+  including optional Playwright, Firefox paths and example dependencies. Diagnostics
+  and version output work before npm dependencies have been installed.
+- Linux/macOS Screenity source-build and extension-lint CI, plus a manual Windows
+  core-portability workflow. These do not claim native browser capture or Windows
+  application integration acceptance. See `docs/RELEASE_CHECKLIST.md`.
 - GitHub Actions CI: the suite and a CLI smoke check across {ubuntu, macOS} x Node
   {22, 24, 26}, the repository content audit, the self-contained `test:agent` and
   `test:research` smoke checks, a Prettier check and a dependency audit. Least-privilege

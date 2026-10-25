@@ -1,9 +1,9 @@
 // Optional demonstration broker. Localhost only; no public broker contact.
 import { createServer } from 'node:net';
-import aedes from 'aedes';
+import { Aedes } from 'aedes';
 const port = Number(process.env.YOINKR_DEMO_PORT ?? process.env.MODKIT_DEMO_PORT ?? 18883);
 if (!Number.isInteger(port) || port < 1024 || port > 65535) throw Error('choose a port from 1024 to 65535');
-const broker = aedes(),
+const broker = await Aedes.createBroker(),
   server = createServer(broker.handle);
 server.once('error', e => {
   console.error(e.message);

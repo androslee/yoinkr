@@ -1,0 +1,27 @@
+name: Windows core portability
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  core:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+      - run: npm ci --ignore-scripts
+      - name: Run core recipe portability checks
+        shell: pwsh
+        run: ./scripts/general/verify-windows.ps1 -Out "$env:RUNNER_TEMP/yoinkr-windows-core"
+      - name: Retain synthetic check details in job logs
+        if: always()
+        shell: pwsh
+        run: |
+          Get-Content "$env:RUNNER_TEMP/yoinkr-windows-core/RESULT.json" -ErrorAction SilentlyContinue
+          Get-Content "$env:RUNNER_TEMP/yoinkr-windows-core/DELIVERY-TESTS.log" -ErrorAction SilentlyContinue
+      # Native VS Code/Joplin/OBS acceptance still needs a Windows test machine.

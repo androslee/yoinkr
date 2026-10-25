@@ -5,12 +5,12 @@ import { createServer } from 'node:net';
 import { createRequire } from 'node:module';
 import { mkdir, writeFile, readFile } from 'node:fs/promises';
 import { resolve, join } from 'node:path';
-import aedes from 'aedes';
+import { Aedes } from 'aedes';
 import mqtt from 'mqtt';
 const require = createRequire(import.meta.url),
   build = resolve(process.env.YOINKR_EXAMPLES ?? process.env.MODKIT_EXAMPLES ?? 'builds/feature-examples-v0.4');
 const { Explorer } = require(join(build, 'mqtt-vscode/controller.cjs'));
-const broker = aedes(),
+const broker = await Aedes.createBroker(),
   server = createServer(broker.handle);
 await new Promise(r => server.listen(0, '127.0.0.1', r));
 const port = server.address().port;

@@ -11,8 +11,8 @@
     "verify": "node verify.mjs"
   },
   "dependencies": {
-    "fabric": "6.9.1",
     "esbuild": "0.25.12",
+    "fabric": "7.4.0",
     "web-ext": "10.8.0"
   }
 }

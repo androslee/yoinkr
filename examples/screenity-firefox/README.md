@@ -67,7 +67,7 @@ Screenity **4.7.0**, commit `c5b344fbb3d9a126c4b3a39f0979c7976392fa96`, from [al
 - `ArrowTool.jsx`, `ShapeTool.jsx`, `TextTool.jsx`, `SelectTool.jsx`;
 - `History.jsx` and `fabricCompat.js`.
 
-These files are retained **byte-for-byte** and bundled with Fabric **6.9.1**. No algorithm is reimplemented under Screenity's name. New Yoinkr code supplies the studio, toolbar/state binding, screen-source selection, frame composition, MediaRecorder export, lifecycle cleanup and portable launcher.
+These files are retained **byte-for-byte** and bundled with Fabric **7.4.0**. A new host adapter maps the donor's removed `getPointer` call to Fabric's scene-coordinate API. No algorithm is reimplemented under Screenity's name. New Yoinkr code supplies the studio, toolbar/state binding, screen-source selection, frame composition, MediaRecorder export, lifecycle cleanup and portable launcher.
 
 The original Chrome background/offscreen/tab-capture architecture is replaced for this bounded feature rather than emulated. This route is source recovery/adaptation, not a claim of complete CRX conversion or whole-app REA reconstruction.
 
@@ -95,7 +95,9 @@ To include real screen sharing, provide an Xvfb executable. The suite creates an
 YOINKR_XVFB=/absolute/path/to/Xvfb GECKODRIVER=/absolute/path/to/geckodriver npm run verify -- --screen
 ```
 
-Development acceptance passed **16 native checks on Firefox 158.0 / Linux x86-64**, including actual temporary add-on installation, original drawing tools/history, native screen chooser and refusal, real private-display capture, playable WebM, source-track shutdown, source-drift refusal, and launch-integrity refusal. Mozilla `web-ext lint` passed with no errors or warnings. These are scoped results for this partial port; the original full Screenity app was not used as a complete behavior oracle. Camera, audio, full upstream UI/editor, Windows/macOS, other display backends and signed add-on distribution remain outside acceptance scope.
+The earlier Fabric 6 build passed **16 native checks on Firefox 158.0 / Linux x86-64**, including actual temporary add-on installation, original drawing tools/history, native screen chooser and refusal, real private-display capture, playable WebM, source-track shutdown, source-drift refusal, and launch-integrity refusal.
+
+The current Fabric 7.4.0 build passed **13 actual headless Firefox checks** on the same Linux/browser lane: installation, original source integrity, drift/launch refusal, pen/arrow/rectangle/highlighter/text tools, undo/redo, composited MediaRecorder output, and cleanup. Real screen sharing was not rerun after this dependency upgrade. Mozilla `web-ext lint` passed with no errors or warnings. These are scoped results for this partial port; the original full Screenity app was not used as a complete behavior oracle. Camera, audio, full upstream UI/editor, Windows/macOS, other display backends and signed add-on distribution remain outside acceptance scope.
 
 ## Temporary developer installation
 

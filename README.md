@@ -23,6 +23,7 @@ cd yoinkr
 npm ci --ignore-scripts
 node src/cli.js --help
 node src/cli.js backend
+node src/cli.js doctor
 ```
 
 To investigate two applications:
@@ -68,6 +69,7 @@ An extension, source module, rendered UI and native component are different tran
 | Build recovered UI packages | [Feature packages](docs/FEATURE_PACKAGES.md), [host adapters](docs/FEATURE_HOSTS.md) |
 | Use agent tools | [MCP setup and permissions](docs/AGENT_TOOLS.md) |
 | Preserve existing Modkit workspaces | [Rename compatibility](docs/RENAMING.md) |
+| Prepare a release or hand off Windows checks | [Release checklist](docs/RELEASE_CHECKLIST.md) |
 
 ## Development
 

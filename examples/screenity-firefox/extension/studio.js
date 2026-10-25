@@ -10,6 +10,8 @@ import {saveCanvas,undoCanvas,redoCanvas} from 'SCREENITY_SOURCE/modules/History
 const $=selector=>document.querySelector(selector);
 const width=960,height=540;
 const canvas=new fabric.Canvas('drawing',{width,height,isDrawingMode:true,selection:false});
+// Fabric 7 removed getPointer; unchanged Screenity tools expect scene coordinates.
+canvas.getPointer=event=>canvas.getScenePoint(event);
 const state={current:{canvas,tool:'pen',shape:'rectangle',drawingMode:true,color:$('#color').value,strokeWidth:2,undoStack:[],redoStack:[]}};
 function setState(next){state.current=typeof next==='function'?next(state.current):next;if(state.current.undoStack)state.current.undoStack=state.current.undoStack.slice(-60);}
 const tools=[PenTool(canvas,state,setState,saveCanvas),ArrowTool(canvas,state,setState,saveCanvas),ShapeTool(canvas,state,setState,saveCanvas),TextTool(canvas,state,setState,saveCanvas),SelectTool(canvas,state,setState)];

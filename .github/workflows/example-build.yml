@@ -1,0 +1,42 @@
+name: Example source build
+on:
+  pull_request:
+    paths: ['examples/screenity-firefox/**', 'test/example-startup.test.js', '.github/workflows/example-build.yml']
+  push:
+    branches: [main]
+    paths: ['examples/screenity-firefox/**', 'test/example-startup.test.js', '.github/workflows/example-build.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  screenity:
+    name: Screenity source build (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: examples/screenity-firefox
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+      - run: npm ci --ignore-scripts
+      - name: Audit example tooling
+        # web-ext's Android-only adbkit -> node-forge path has an unpatched high
+        # advisory. Report it visibly while gating critical findings; see UPSTREAMS.
+        run: npm audit --audit-level=critical
+      - name: Acquire hash-pinned original modules
+        run: npm run acquire
+      - name: Build the recovered extension from a fresh checkout
+        run: npm run build
+      - name: Lint the Firefox extension
+        run: node node_modules/web-ext/bin/web-ext.js lint --source-dir .local/demo/extension
+      # This builds original sources on both systems. It does not launch Firefox,
+      # grant screen permissions, or establish native capture acceptance.

@@ -55,6 +55,9 @@ jobs:
       - name: CLI starts
         run: node src/cli.js --help
 
+      - name: Prerequisite diagnostics
+        run: node src/cli.js doctor --json
+
       - name: Unit and regression suite
         run: npm test
 
@@ -114,9 +117,8 @@ jobs:
         run: npm run test:research
 
   audit:
-    # Gates on high advisories. The pinned rea-agents -> zod version has a documented,
-    # tested same-major override. Remaining moderate advisories come through Aedes, used
-    # only for local tests/demos, and need a major upgrade for a fix.
+    # Gates on high advisories. REA's exact Zod pin has a documented, tested override.
+    # Aedes 1.2 removed the vulnerable UUID dependency from local tests/demos.
     name: dependency audit
     runs-on: ubuntu-latest
     timeout-minutes: 10
