@@ -82,6 +82,20 @@ repository is private without a configured Code Security entitlement. Once publi
 run it manually and triage results; a skipped job is not a successful scan. Do not
 enable competing CodeQL default setup when this advanced workflow is in use.
 
+## Fresh-user example acceptance
+
+**Screenity → Firefox: passed on Linux x86-64.** A new GitHub clone at `9913595`
+installed the example's dependencies from its lockfile, freshly acquired original
+Screenity sources, and built against a new Mozilla Firefox 158.0 download checked
+against the publisher's SHA-512. No workspace-generated extension or browser copy
+was reused. Lint, all 16 native capture checks and the ordinary temporary-add-on
+launcher passed; tracked source files stayed unchanged. GeckoDriver, Xvfb and OS
+libraries were supplied as documented. See the [example guide](../examples/screenity-firefox/README.md).
+
+This completes the first-run gate for that named example/platform. Other examples
+still need their own clean acquisition/install/native runs; a successful Screenity
+setup does not complete every release gate or establish Windows/macOS support.
+
 ## Windows handoff
 
 The **Windows core portability** Actions workflow, run automatically on pushes and

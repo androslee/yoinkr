@@ -92,6 +92,16 @@ known Screenity tooling advisory. No untested replacement, downgrade or advisory
 suppression was added. Removing this dependency would require separately verifying
 a replacement desktop Firefox launcher and extension-lint tooling.
 
+## Fresh-user Screenity follow-up
+
+The Screenity Linux setup was independently exercised from a new clone at
+`9913595`, with fresh npm dependencies, freshly downloaded hash-pinned donor sources
+and a new Mozilla-checksum-verified Firefox 158.0 archive. Build, zero-error/warning
+lint, all 16 native screen-capture checks and ordinary launcher installation passed.
+The checkout remained unchanged. Runtime/test tools and OS libraries are explicit
+external prerequisites. Other examples' end-to-end first-run checks and unsupported
+platforms remain outside this result; raw receipts and applications are not tracked.
+
 ## Remaining release gates
 
 - Run the committed workflows on GitHub and inspect actual results. Local checks

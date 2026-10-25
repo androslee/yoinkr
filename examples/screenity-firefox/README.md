@@ -99,6 +99,27 @@ The earlier Fabric 6 build passed **16 native checks on Firefox 158.0 / Linux x8
 
 The current Fabric 7.4.0 build passed **16 native Firefox checks** on the same Linux/browser lane: installation, original source integrity, drift/launch refusal, pen/arrow/rectangle/highlighter/text tools, undo/redo, composited MediaRecorder output, and cleanup, plus the native sharing chooser, real capture of a private Xvfb screen, playable recording, cancellation and source-track shutdown. This includes a fresh rebuild and real screen-sharing rerun during pre-publication verification. Mozilla `web-ext lint` passed with no errors or warnings. These are scoped results for this partial port; the original full Screenity app was not used as a complete behavior oracle. Camera, audio, full upstream UI/editor, Windows/macOS, other display backends and signed add-on distribution remain outside acceptance scope.
 
+## Fresh-checkout acceptance
+
+The documented first-run sequence was verified from a new GitHub clone at
+`9913595` on Linux x86-64, with no pre-existing `node_modules`, `.local`, acquired
+Screenity sources or generated extension. The example installed independently
+using its own `npm ci --ignore-scripts`; no root dependency install or DSH setup
+was needed. `acquire` downloaded the pinned original sources again.
+
+A new Firefox 158.0 archive was downloaded from Mozilla's release archive and
+checked against Mozilla's published SHA-512 before extraction. `build` copied that
+runtime into the new lab. Mozilla lint reported zero errors, notices or warnings;
+all 16 native checks, including real private-display screen capture, passed.
+The ordinary `npm start` launcher path was also exercised and confirmed actual
+temporary add-on installation. The tracked checkout remained unchanged.
+
+GeckoDriver, Xvfb and the required OS libraries were supplied separately, as the
+verification instructions require. This proves the named Linux first-run route;
+it does not establish native Windows/macOS compatibility or resolve the documented
+web-ext development-tool dependency advisory. Downloads, lab profiles and raw
+receipts remain ignored local outputs.
+
 ## Temporary developer installation
 
 The launcher uses pinned `web-ext` tooling and Firefox's supported temporary add-on mechanism. It does **not** turn off signature enforcement or install into your everyday profile. The add-on lasts only for that browser session. A permanent public add-on would require Mozilla review/signing and separate packaging work. [Mozilla's temporary-installation documentation](https://extensionworkshop.com/documentation/develop/temporary-installation-in-firefox/).
