@@ -100,7 +100,12 @@ export class CdpClient {
 // Guard each document against duplicate registration/evaluation races. This is
 // error containment, not a sandbox: mods execute with the renderer's authority.
 export function wrapModSource(modId, source) {
-  const id = JSON.stringify(modId);
+  // Keep identifiers as data even if a caller embeds the wrapper in HTML.
+  // The mod source itself is intentionally executable trusted input, not sanitized.
+  const id = JSON.stringify(modId).replace(
+    /[<>&\u2028\u2029]/g,
+    c => '\\u' + c.charCodeAt(0).toString(16).padStart(4, '0')
+  );
   return `(function(){const id=${id};const runs=window.__modkitRuns||(window.__modkitRuns=Object.create(null));if(runs[id])return;runs[id]='running';try{${source}\nruns[id]='loaded';}catch(e){runs[id]='failed';console.error('[yoinkr]',id,e&&e.stack||e);const errors=window.__modkitErrors||(window.__modkitErrors=Object.create(null));errors[id]=String(e&&e.stack||e);}})();`;
 }
 

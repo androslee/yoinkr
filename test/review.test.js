@@ -112,6 +112,20 @@ test('wrapped code is idempotent and reports failures without contaminating anot
   vm.runInContext(wrapModSource('good', 'window.good=true'), context);
   assert.equal(context.window.good, true);
 });
+test('wrapped mod identifiers remain literal data with markup, quotes and line separators', () => {
+  const id = '</script><SCRIPT>window.injected=true</SCRIPT>"\\\u2028\u2029';
+  const context = { window: {}, console: { error() {} } };
+  vm.createContext(context);
+  const source = wrapModSource(id, 'window.calls=(window.calls||0)+1;');
+  assert.equal(source.includes('<'), false);
+  assert.equal(source.includes('\u2028'), false);
+  assert.equal(source.includes('\u2029'), false);
+  vm.runInContext(source, context);
+  vm.runInContext(source, context);
+  assert.equal(context.window.injected, undefined);
+  assert.equal(context.window.calls, 1);
+  assert.equal(context.window.__modkitRuns[id], 'loaded');
+});
 test('endpoint discovery accepts split stderr chunks and handles spawn failure', async () => {
   const child = new EventEmitter();
   child.stderr = new EventEmitter();

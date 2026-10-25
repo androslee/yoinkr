@@ -13,6 +13,9 @@ history left behind. Entries start at the first public release.
 
 ### Fixed
 
+- Hardened CDP wrapper identifiers against script-closing markup and Unicode line
+  separators. Clarified a native test's literal-markup assertion during public CodeQL review.
+
 - Reproduce frozen MQTT research builds using retained lock metadata and debug
   source-map URL normalization, while still requiring the original bundle hashes.
   Updated remaining native verification paths for Aedes 1.2 and compatible Joplin menu IDs.

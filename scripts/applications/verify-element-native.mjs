@@ -142,7 +142,7 @@ try {
     await page.locator('#query').fill('');
     await wait(async () => (await page.locator('.message').count()) === 2, 'community messages');
     assert.equal(await page.locator('script:not([src])').count(), 0);
-    assert.match(await page.locator('#results').innerText(), /<script>/);
+    assert.ok((await page.locator('#results').innerText()).includes('<script>'));
   });
   await check('Native bridge exposes only explicit operations', async () => {
     for (const input of [{ action: 'exec' }, { action: 'sample', path: '/etc/passwd' }]) {
