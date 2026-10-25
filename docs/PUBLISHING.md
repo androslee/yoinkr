@@ -1,7 +1,9 @@
 # Source-only publication handoff
 
 The owner authorized public visibility and source-only publication on 2026-10-25.
-The repository is now public. The commands below document the reviewed settings
+The repository is now public, and the [v0.30.0 experimental source preview](https://github.com/androslee/yoinkr/releases/tag/v0.30.0) is published.
+All 15 required checks passed on its tagged commit, with both CodeQL lanes reporting
+zero findings. The commands below document the reviewed settings
 and release procedure; they are not an automatic publication script. No generated apps, donor bundles, runtimes, profiles or raw
 verification reports are release assets. In particular, the owner excluded all
 generated MQTT Explorer integrations while retaining source tooling and a case study.

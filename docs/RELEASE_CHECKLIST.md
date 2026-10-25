@@ -11,14 +11,18 @@
 - [x] Known Screenity tooling advisory documented with its CI exception and scope.
 - [x] Public security/branch settings and experimental source release notes prepared for review.
 - [x] Owner authorization to make the repository public (2026-10-25).
-- [ ] Apply public security/reporting/protection settings and verify actual public CodeQL results.
-- [ ] Publish the reviewed source-only experimental tag/release after those checks.
+- [x] Apply public security/reporting/protection settings and verify actual public CodeQL results.
+- [x] Publish the reviewed source-only experimental tag/release after those checks.
 
 The repository became public on 2026-10-25. Secret-scanning push protection,
 private vulnerability reporting, Dependabot updates and the prepared main-branch
 protections are enabled. Public CodeQL found two items; the follow-up hardens CDP
-identifier encoding and clarifies a literal-markup test assertion. Final analysis
-of the corrected candidate and release publication remain pending below.
+identifier encoding and clarifies a literal-markup test assertion. Both findings
+are fixed. All 15 required checks passed on release commit `3ccecc6`, including
+both public CodeQL lanes with zero findings. The
+[v0.30.0 experimental source release](https://github.com/androslee/yoinkr/releases/tag/v0.30.0)
+is published with no attached application/bundle assets. Its actual source archive
+was checked: 414 files, no excluded generated paths or runtime binaries.
 See [publication handoff](PUBLISHING.md). Unsupported platforms and the GIMP
 prototype are documented exclusions, not passed native acceptance.
 
@@ -144,7 +148,7 @@ tests do not permit distribution of generated apps/bundles. The MQTT research bu
 full private replay passed 76 observations, all three donor comparisons and guarded
 rollback of both recipients, with no remaining owned app/browser processes. These
 are source-tooling checks, not a distributed integration. Public settings and
-actual public CodeQL results remain separate gates.
+actual public CodeQL results were verified separately for the published release.
 
 ## Windows handoff
 
@@ -174,11 +178,11 @@ See [portable delivery](PORTABLE_DELIVERY.md).
 
 ## GitHub settings before public release
 
-The repository owner must explicitly choose when to make the private repository
-public. Once public, enable private vulnerability reporting under Settings →
-Advanced Security and confirm the form linked by SECURITY.md opens. While private,
-that public reporting channel is unavailable; agree on a private maintainer contact
-with collaborators instead of posting vulnerability details in issues.
+The owner explicitly authorized public visibility on 2026-10-25. Private
+vulnerability reporting is enabled and the form linked by SECURITY.md opens.
+The prepared main rule requires 15 actual checks and one contributor review,
+blocks force pushes and branch deletion, and retains the documented owner/admin
+bypass. The release was held until every check passed on its exact commit.
 
 Enable secret-scanning push protection, Dependabot alerts/security updates, and
 private vulnerability reporting. Public secret scanning is automatic, but review

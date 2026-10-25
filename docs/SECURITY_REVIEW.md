@@ -133,16 +133,29 @@ The old donor dependencies are isolated research inputs, not production advice.
 Native research checks also exposed stale Aedes startup and Joplin menu identifiers;
 these are corrected without changing the pinned recipient runtime or expectations.
 
-## Remaining release gates
+## Publication completed — 2026-10-25
 
-- Run the committed workflows on GitHub and inspect actual results. Local checks
-  do not establish that hosted Actions passed.
-- CodeQL is prepared for JavaScript/TypeScript and Actions but is skipped while
-  this personal repository remains private without a configured entitlement.
-  After publication, run the Security workflow manually and triage all findings.
-- Keep native claims limited to the named fresh-user Linux checks and explicitly
-  verified bindings; other native platforms remain unverified.
-- Review donor licenses, source/notice delivery and product branding. Recipes do
-  not grant permission to redistribute upstream software.
-- Configure repository settings and private reporting using the
-  [release checklist](RELEASE_CHECKLIST.md). Visibility has not been changed.
+The owner authorized public visibility and the experimental source-only release.
+All 15 required checks passed on tagged commit `3ccecc6`, including actual CodeQL
+JavaScript/TypeScript and Actions analyses with zero findings. CodeQL initially
+flagged JSON encoding of mod IDs and a literal-markup test regex. The follow-up
+escapes HTML delimiters/Unicode separators in the generated identifier, adds a
+regression proving the identifier remains data, and uses a literal-string
+assertion for the markup fixture. Both findings were automatically marked fixed;
+no alert dismissal or query suppression was used. The updated native Element
+suite passed all 12 checks and the core suite passed 279 tests (two expected skips).
+
+Secret-scanning push protection, private vulnerability reporting, Dependabot
+alerts/updates and main-branch protections are enabled. The reporting route opens;
+no competing default CodeQL setup is configured. All 15 checks are required for
+contributors with strict/up-to-date checks and one review. Force pushes/deletion
+are disabled. The sole owner's documented admin bypass remains available; owner
+publication follow-up commits used that bypass, with release checks verified before
+tagging. A successful CI run does not independently certify security.
+
+[v0.30.0](https://github.com/androslee/yoinkr/releases/tag/v0.30.0) is an experimental
+source prerelease, with no uploaded application/bundle assets. GitHub's actual
+source archive was inspected: 414 files and no excluded generated paths or runtime
+binaries. MQTT generated derivatives remain excluded. The documented Screenity
+node-forge tooling advisory and unsupported native platforms remain limitations;
+publication does not resolve either. Raw receipts remain ignored locally.

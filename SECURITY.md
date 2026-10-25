@@ -23,8 +23,8 @@ inputs. Hashes bind files to reviewed metadata; they do not authenticate a malic
 recipe and payload supplied together. Browser tabs have a separate sandbox/IPC
 boundary, while pinned browser extensions are trusted code with access to pages.
 
-See the scoped [pre-publication review](docs/SECURITY_REVIEW.md) and its remaining
-release gates. Automated scans supplement review and do not certify the project
+See the scoped [pre-publication review](docs/SECURITY_REVIEW.md) and its verification
+limits. Automated scans supplement review and do not certify the project
 as vulnerability-free.
 
 ## What is in scope
