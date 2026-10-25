@@ -14,7 +14,9 @@
       "browser example source build",
       "full-history secret scan",
       "dependency audits",
-      "Windows core recipe checks"
+      "Windows core recipe checks",
+      "CodeQL (javascript-typescript)",
+      "CodeQL (actions)"
     ]
   },
   "enforce_admins": false,

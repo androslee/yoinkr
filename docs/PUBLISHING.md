@@ -40,8 +40,8 @@ workflow is desired.
 gh api --method PUT repos/androslee/yoinkr/branches/main/protection --input .github/main-protection.json
 ```
 
-After both public CodeQL lanes have passed, add their actual check names to required
-checks. Do not globally require the path-filtered Example source build workflow:
+The template includes the actual public `CodeQL (javascript-typescript)` and
+`CodeQL (actions)` check names; both are required alongside the core checks. Do not globally require the path-filtered Example source build workflow:
 unrelated pull requests would wait for a missing status. Recheck rule behavior on
 a normal pull request. These JSON templates do not apply themselves.
 
