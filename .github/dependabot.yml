@@ -20,3 +20,12 @@ updates:
     open-pull-requests-limit: 0
     commit-message:
       prefix: deps
+
+  # The browser-host example has its own pinned compatibility/bundling dependencies.
+  - package-ecosystem: npm
+    directory: /examples/ublock-vscode
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 0
+    commit-message:
+      prefix: deps

@@ -1,0 +1,42 @@
+{
+  "schema": 1,
+  "id": "ublock-vscode-research-browser",
+  "upstream": "https://github.com/gorhill/uBlock",
+  "version": "1.75.0",
+  "platform": "chromium-mv2",
+  "archive": "https://github.com/gorhill/uBlock/releases/download/1.75.0/uBlock0_1.75.0.chromium.zip",
+  "sha256": "393cf95709d1074d4022970e9014e434395c53a822387f1e25f43be97cf4b582",
+  "source": "https://github.com/gorhill/uBlock/tree/1.75.0",
+  "compatibilityLayer": "electron-chrome-extensions@4.9.0",
+  "license": "GPL-3.0",
+  "scope": "Original full uBlock Origin Chromium extension in a separate native browser window owned by a copied VS Code application. Not uBlock Origin Lite; not Firefox-specific filtering APIs.",
+  "extensions": [
+    {
+      "key": "dark-reader",
+      "name": "Dark Reader",
+      "version": "4.9.133",
+      "archive": "https://github.com/darkreader/darkreader/releases/download/v4.9.133/darkreader-chrome.zip",
+      "sha256": "3515b14f96bee900be6f606c1d2b4e0272440261a46c2b14f77917b25e89890e",
+      "rootPrefix": "",
+      "manifestVersion": 2,
+      "source": "https://github.com/darkreader/darkreader/tree/v4.9.133",
+      "license": "MIT"
+    },
+    {
+      "key": "res",
+      "name": "Reddit Enhancement Suite",
+      "version": "5.24.11",
+      "archive": "https://github.com/honestbleeps/Reddit-Enhancement-Suite/releases/download/v5.24.11/chrome.zip",
+      "sha256": "69786c994c9a754282a49215ed7355af0f646b41d924242c0da78fb15e7b9a05",
+      "rootPrefix": "",
+      "manifestVersion": 3,
+      "source": "https://github.com/honestbleeps/Reddit-Enhancement-Suite/tree/v5.24.11",
+      "license": "GPL-3.0"
+    }
+  ],
+  "firefoxAudit": {
+    "version": "1.75.0",
+    "archive": "https://github.com/gorhill/uBlock/releases/download/1.75.0/uBlock0_1.75.0.firefox.signed.xpi",
+    "sha256": "5b74415860456370644bd80f16125e865b0e6c356bb5dfcfb84069967eaa5287"
+  }
+}

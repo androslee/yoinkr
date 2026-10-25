@@ -4,6 +4,7 @@ Start with one donor/recipient pair. These are reproducible source examples, not
 
 | Directory | Example | Status |
 | --- | --- | --- |
+| [ublock-vscode](ublock-vscode/README.md) | uBlock Origin, Dark Reader and RES → VS Code browser with vertical tabs and sessions | Original Chromium MV2 extension; scoped native Linux acceptance and reproducible checks. |
 | [krita-obs](krita-obs/README.md) | Krita Qt color selector → OBS live annotation dock/source | Scoped native Qt widget transfer, GPU rendering, restart and rollback verified. |
 | [screenity-firefox](screenity-firefox/README.md) | Screenity drawing tools → separate Firefox recording studio | Experimental partial port; native Firefox verification command included. |
 | [mqtt-raw-diff](mqtt-raw-diff/README.md) | MQTT Explorer Raw/Diff UI → VS Code and Joplin | Scoped Linux native transfer; original and recipient checks. |

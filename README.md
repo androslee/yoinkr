@@ -40,6 +40,7 @@ Analysis and builds run locally without model tokens. Installing dependencies an
 
 | Example | What is transferred | Scope |
 | --- | --- | --- |
+| [uBlock Origin → VS Code](examples/ublock-vscode/README.md) | Original uBlock, Dark Reader and adapted RES in a browser with vertical tabs and named sessions | Separate browser session; default/custom network filtering, cosmetics, scriptlets and original controls. Linux scope and checks in the example guide. |
 | [Krita → OBS](examples/krita-obs/README.md) | Original Qt triangle color selector controlling transparent live ink | Actual OBS dock, GPU scene rendering, restart and guarded rollback verified on the pinned Linux/Qt lane. RGB host; not Krita’s full paint engine. |
 | [Screenity → Firefox](examples/screenity-firefox/README.md) | Original drawing, highlighting, arrows, shapes, text and history modules | Experimental Firefox recording studio with a separate portable browser/profile. Partial port; see the example for tested capture modes and limits. |
 | [MQTT Explorer → VS Code / Joplin](examples/mqtt-raw-diff/README.md) | Recovered Raw/Diff comparison UI | Scoped Linux native adapters, original/recipient comparisons and guarded rollback. |
@@ -47,6 +48,16 @@ Analysis and builds run locally without model tokens. Installing dependencies an
 | [GIMP → OBS](examples/obs-annotations/README.md) | Original stroke-smoothing function | Experimental Qt dock/annotation source; compilation and numeric checks established, actual OBS/GIMP GUI acceptance pending. |
 
 Each example describes original versus new code, exact input versions, setup, output locations and verification limits. Third-party source/runtime downloads, browser profiles, credentials, recovered payloads, screenshots and large binaries are generated locally and excluded from Git.
+
+### Featured: VS Code research browser
+
+The [uBlock Origin → VS Code example](examples/ublock-vscode/README.md) adds a native browser window to a separate copy of Code:
+
+- **Full original uBlock Origin MV2**, with custom filters, subscriptions, per-site controls and the original dashboard/logger. Network blocking, cosmetic filtering, scriptlets and CSP header enforcement are verified.
+- **Dark Reader and Reddit Enhancement Suite**, with always-visible enable/disable and settings buttons.
+- **Vertical tabs, named local sessions and automatic tab restoration.**
+
+This restores the original blocker's filtering workflow in the tested Electron host. It does not claim a measured blocking-rate advantage over Lite. DNS/CNAME uncloaking and Firefox response-body filtering remain future work. The guide includes setup, build, verification and rollback instructions; native verification currently covers Linux x86-64. Source and recipes are shared here; downloaded applications, generated builds and browsing profiles stay local.
 
 ## How transfers work
 

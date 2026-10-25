@@ -1,0 +1,13 @@
+# Third-party inputs
+
+- **uBlock Origin 1.75.0**, Raymond Hill and contributors: GPLv3. Original Chromium MV2 release archive is downloaded from the author's GitHub release and SHA-256 verified. Its JavaScript, assets and LICENSE.txt are preserved without edits. Corresponding upstream source and build instructions: https://github.com/gorhill/uBlock/tree/1.75.0 and https://github.com/gorhill/uBlock/tree/1.75.0/tools . Bundled filter lists retain their respective notices; additional list downloads are controlled by uBlock itself.
+- **electron-chrome-extensions 4.9.0**, Samuel Maddock: GPLv3 option of the upstream dual license, explicitly selected by this adapter. https://github.com/samuelmaddock/electron-browser-shell . The build includes LICENSE.md and LICENSE-GPL, and the upstream compatibility preload with Yoinkr response-header preservation and interstitial adapters. The original preload source is included separately. Its main-process/browser-action modules are bundled by esbuild.
+- **fflate 0.8.3**, Arjun Barrett: MIT. https://github.com/101arrowz/fflate . Used to unpack the verified extension archive. Its license is included in generated output.
+- **debug / ms**, transitive dependencies of the compatibility layer: MIT. Their notices are included in the generated main bundle's legal comments and separate license files.
+- **VS Code / Electron / Chromium**: the caller supplies a local runtime. Its own licenses and notices are retained in the separate application copy. This repository does not redistribute Microsoft installers or branding rights.
+
+The original uBlock Origin name identifies the upstream extension. Yoinkr's browser host is experimental and is not an official uBlock Origin or Microsoft product. Distribution of generated copies requires compliance with all included licenses and any runtime redistribution terms. Source recipes, original unmodified upstream source and host source must accompany derived releases as required by their licenses.
+
+- **Dark Reader 4.9.133**, Dark Reader contributors: MIT. Original GitHub Chromium MV2 package and notices are preserved. Source: https://github.com/darkreader/darkreader/tree/v4.9.133 .
+- **Reddit Enhancement Suite 5.24.11**, RES contributors: GPLv3. Source: https://github.com/honestbleeps/Reddit-Enhancement-Suite/tree/v5.24.11 . Original JavaScript, styles and LICENSE are preserved. The host derives a manifest to prepend its `res-context.js` adapter; the original manifest is stored alongside it. The adapter and build recipe are included in corresponding Yoinkr source.
+- The Firefox uBlock package is downloaded only for an optional source audit. The current recipient does not execute it or implement its Firefox-only DNS/response-stream APIs.

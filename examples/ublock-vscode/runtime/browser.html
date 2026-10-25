@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'self'; style-src 'self' 'sha256-EcmZWsVOOb/2FKPnrt1taNtRFqbR3tL7BMlKMu1vsmQ='; img-src 'self' crx: data:; connect-src crx:; object-src 'none'; base-uri 'none'; frame-src 'none'"
+    />
+    <title>Yoinkr research browser</title>
+    <link rel="stylesheet" href="browser.css" />
+  </head>
+  <body>
+    <header>
+      <div class="brand">YOINKR <span>RESEARCH BROWSER</span></div>
+      <div id="protection" role="status">Starting uBlock Origin…</div>
+    </header>
+    <aside>
+      <button id="new" title="New tab (Ctrl/Cmd+T)">＋ New tab</button>
+      <nav id="tabs" aria-label="Vertical browser tabs"></nav>
+      <div class="tools">
+        <button id="dashboard">uBlock settings &amp; filters</button><button id="logger">Request logger</button
+        ><small>Full uBlock Origin · separate browser profile</small>
+      </div>
+    </aside>
+    <section id="toolbar">
+      <button id="back" title="Back" aria-label="Back">←</button
+      ><button id="forward" title="Forward" aria-label="Forward">→</button
+      ><button id="reload" title="Reload" aria-label="Reload">↻</button>
+      <form id="address-form">
+        <input id="address" aria-label="Web address" placeholder="https://example.com" spellcheck="false" /><button>
+          Go
+        </button>
+      </form>
+      <browser-action-list
+        id="actions"
+        partition="persist:yoinkr-research-web"
+        alignment="bottom right"
+      ></browser-action-list>
+    </section>
+    <section id="pluginbar" aria-label="Plugins and sessions">
+      <div class="plugin-row">
+        <div id="plugin-controls" aria-label="Plugin switches"></div>
+        <button id="toggle-sessions" aria-pressed="true">Sessions · ON</button>
+      </div>
+      <div class="session-row">
+        <input id="session-name" aria-label="Session name" placeholder="Name this session" maxlength="64" /><button
+          id="save-session"
+        >
+          Save tabs</button
+        ><select id="saved-sessions" aria-label="Saved sessions">
+          <option value="">Saved sessions…</option></select
+        ><button id="restore-session">Open session</button><button id="delete-session">Delete</button>
+      </div>
+    </section>
+    <main id="empty">
+      <h1>Your research, alongside your code.</h1>
+      <p>Open a webpage using the address bar. Tabs appear down the left.</p>
+      <p>
+        uBlock Origin’s shield opens its original popup. Use its settings for filter lists, custom filters, site
+        exceptions and advanced mode. Toggle plugins directly above the page; RES enhances old.reddit.com.
+      </p>
+    </main>
+    <footer id="message" role="status"></footer>
+    <script src="browser.js"></script>
+  </body>
+</html>

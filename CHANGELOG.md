@@ -38,6 +38,13 @@ history left behind. Entries start at the first public release.
 
 ### Added
 
+- A source-built VS Code research-browser example with original MV2 uBlock Origin,
+  Dark Reader, adapted RES, vertical tabs, visible plugin enable/disable switches
+  and local named sessions. Native Linux checks cover filtering, scriptlets,
+  response-header/CSP enforcement, RES user tags, plugin lifecycle and restart.
+- A reproducible source audit and staged host-API plan for Firefox-only uBlock
+  DNS/CNAME and response-body filtering. Those Firefox APIs are not implemented.
+
 - `yoinkr doctor` / `npm run doctor` provide read-only prerequisite diagnostics,
   including optional Playwright, Firefox paths and example dependencies. Diagnostics
   and version output work before npm dependencies have been installed.

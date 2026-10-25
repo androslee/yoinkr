@@ -1,0 +1,20 @@
+{
+  "name": "yoinkr-example-ublock-vscode",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "license": "GPL-3.0-only",
+  "scripts": {
+    "acquire": "node acquire.mjs",
+    "build": "node build.mjs",
+    "start": "node launch.mjs",
+    "verify": "node verify.mjs",
+    "verify:plugins": "node verify-plugins.mjs",
+    "audit:firefox": "node audit-firefox.mjs"
+  },
+  "dependencies": {
+    "electron-chrome-extensions": "4.9.0",
+    "esbuild": "0.25.12",
+    "fflate": "0.8.3"
+  }
+}
