@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdtemp, readFile, writeFile, rm, symlink, unlink, mkdir, realpath } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
+import { fileURLToPath } from 'node:url';
 import {
   exportDeliveryBundle,
   importDeliveryBundle,
@@ -13,6 +14,12 @@ import {
 } from '../src/delivery.js';
 import { createAgent } from '../src/agent.js';
 import { startWorkbench } from '../src/workbench.js';
+test('published reference recipe bundle passes its committed integrity manifest', async () => {
+  const directory = fileURLToPath(new URL('../recipes/reference-raw-diff/', import.meta.url));
+  const result = await inspectDeliveryBundle(directory);
+  assert.equal(result.status, 'integrity-verified');
+  assert.equal(result.distribution, 'recipes-only-local-donor-inputs');
+});
 const fixture = async () => {
   const root = await realpath(await mkdtemp(join(tmpdir(), 'yoinkr-delivery-test-')));
   const bundle = join(root, 'reference');

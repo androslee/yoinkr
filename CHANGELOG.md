@@ -13,6 +13,9 @@ history left behind. Entries start at the first public release.
 
 ### Fixed
 
+- Corrected the reference recipe bundle manifest after the guide script paths changed;
+  regression tests now validate the published bundle as well as fresh exports.
+
 - Browser example builds now refuse an existing output directory before adding files;
   source-build acceptance covers caller-data preservation and guarded rollback.
 

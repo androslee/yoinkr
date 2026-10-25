@@ -15,8 +15,8 @@
     },
     {
       "path": "GUIDE.md",
-      "sha256": "7a99453c5597c6e7742450b77065e50ec6bdb8a273d95950a22e86da76150e70",
-      "bytes": 11203
+      "sha256": "8bc1e459c2c0d4cb5bdd535fe9471daaecdbb5acc047f84598761af5fd13491a",
+      "bytes": 11229
     },
     {
       "path": "joplin.json",
@@ -49,5 +49,5 @@
       "bytes": 1570
     }
   ],
-  "digest": "2dfd1552326970d0a7900a5396ba2b034ccffc3a0f3290c95c266f64825617a5"
+  "digest": "33d3a34ed5cba21ccff4fafd0f19acf4c9076b867466484a2ea4cb4cad74b2bf"
 }
