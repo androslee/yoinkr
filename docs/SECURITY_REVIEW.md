@@ -76,6 +76,22 @@ Dependency alerts and automated security-update PRs are enabled. GitHub refused
 branch rules for the current private repository without a plan upgrade; reporting,
 push protection and public CodeQL acceptance remain publication-time checks.
 
+## Native Linux follow-up
+
+Pre-publication verification reran the original MV2 uBlock browser (19 checks)
+and plugin/session suite (12 checks). Screenity was rebuilt and passed 16 native
+Firefox checks with Fabric 7.4.0, including actual screen sharing on a private Xvfb
+display, playable recording and source-track cleanup. Krita's original widget was
+rebuilt against the accepted Qt/OBS SDK, and feature, restart, ordinary launcher,
+rollback and integrity checks passed with zero OBS-tracked leaks in all sessions.
+Raw results remain ignored; commands and limits are in the example guides. These
+runs do not certify general browser security or unsupported platforms.
+
+Upstream registry review still finds no patched node-forge/web-ext release for the
+known Screenity tooling advisory. No untested replacement, downgrade or advisory
+suppression was added. Removing this dependency would require separately verifying
+a replacement desktop Firefox launcher and extension-lint tooling.
+
 ## Remaining release gates
 
 - Run the committed workflows on GitHub and inspect actual results. Local checks

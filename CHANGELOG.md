@@ -47,6 +47,10 @@ history left behind. Entries start at the first public release.
 
 ### Added
 
+- Windows core portability now runs automatically on pushes and pull requests.
+- Updated native acceptance scope after successful uBlock/plugin, real Screenity
+  screen-capture and rebuilt Krita/OBS lifecycle verification on Linux.
+
 - Full-history secret scanning, CodeQL configuration for public repositories, and
   browser-example dependency/format/build CI with a synthetic runtime.
 - Contributor guidance, issue/PR templates and a scoped pre-publication security

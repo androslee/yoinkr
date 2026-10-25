@@ -4,6 +4,7 @@ The [framework support matrix and application catalog](FRAMEWORK_SUPPORT.md) rec
 
 | Pair / family | Delivered transfer | Status |
 | --- | --- | --- |
+| uBlock Origin / Dark Reader / RES → VS Code | Original browser extensions plus native vertical tabs, controls and local sessions | Scoped Linux Electron browser acceptance: 19 blocker and 12 plugin checks; [example and limits](../examples/ublock-vscode/README.md) |
 | MQTT Explorer → VS Code | Recovered topic/payload core, numeric conversion, and the original Raw/Diff UI package | Verified in named Linux VS Code lab copies; [host proof](FEATURE_HOSTS.md) and [version repair](ADAPTER_REPAIR.md) |
 | MQTT Explorer → Joplin | Same complete recovered Raw/Diff package, with Joplin selection/theme/persistence bindings | Verified in Joplin 3.7.21 **safe mode**, using native-textarea selections; normal/rich-editor capture is not verified; [second-host proof](SECOND_HOST.md) |
 | VS Code preview assets → Chromium | Markdown styling plus newly written local notebook/table/text viewing | Verified browser-host demonstration; not Chromium C++ integration or built-in MIME support; [showcase](../examples/README.md) |
@@ -15,6 +16,6 @@ The [framework support matrix and application catalog](FRAMEWORK_SUPPORT.md) rec
 
 MQTT Explorer, VS Code and Joplin share Electron/Node/Chromium, but each recipient needs its own versioned adapter. [Joplin's architecture](https://joplinapp.org/help/dev/spec/architecture/) describes its Electron/React desktop application. Runtime similarity does not establish compatible host APIs or automatic portability.
 
-Chromium itself has a [native multi-process browser architecture](https://www.chromium.org/developers/design-documents/multi-process-architecture/). Sharing the rendering engine does not make its application startup compatible with Electron's Node main process. A native Chromium feature needs a dedicated integration/build route. Firefox likewise needs a separate runtime playbook; no Firefox transfer has been verified.
+Chromium itself has a [native multi-process browser architecture](https://www.chromium.org/developers/design-documents/multi-process-architecture/). Sharing the rendering engine does not make its application startup compatible with Electron's Node main process. A native Chromium feature needs a dedicated integration/build route. Firefox uses its own runtime playbook; the bounded Screenity source port is verified as listed above. That result does not establish arbitrary Chrome-extension compatibility.
 
 The showcase demonstrates source/application integration without installing an existing marketplace extension. Extension-based delivery remains an available route when useful. The current acceptance evidence is scoped to particular features and configurations, not whole-application equivalence.

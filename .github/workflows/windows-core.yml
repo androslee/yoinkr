@@ -1,10 +1,17 @@
 name: Windows core portability
 on:
+  push:
+    branches: [main]
+  pull_request:
   workflow_dispatch:
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 permissions:
   contents: read
 jobs:
   core:
+    name: Windows core recipe checks
     runs-on: windows-latest
     timeout-minutes: 15
     steps:

@@ -75,6 +75,8 @@ Accepted checks include:
 - Source, module and runtime drift refusal; refusal to remove a changed installed module.
 - Normal exit and **zero OBS-tracked memory leaks** in all four sessions.
 
+Pre-publication verification rebuilt the module from the pinned original sources and reran all four sessions successfully, each with zero OBS-tracked leaks.
+
 The feature suite has **13 checks**, repeated after restart and through the ordinary launcher, plus **two fresh-launch checks**, **two rollback checks** and **four integrity checks**. Receipts, source frames, screenshots and logs are generated under `.local/verification/`. These checks do not run the complete original Krita application or establish end-to-end color-managed parity with it. The native PNG file chooser, production streaming, long-session performance, pressure/tablet input and other platforms remain unverified.
 
 To remove the module from the normal lab configuration after closing OBS:

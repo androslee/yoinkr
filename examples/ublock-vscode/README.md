@@ -117,6 +117,8 @@ PLAYWRIGHT_MODULE=/path/to/node_modules/playwright/index.mjs \
 
 Acceptance exercises a real Code workbench, original extension readiness, default-list request blocking, custom rules, allowed requests, exceptions, cosmetic filtering, page-world scriptlets, the original popup/site switch, response-header/CSP enforcement, vertical-tab selection, original dashboard/logger pages, sandbox settings and restart persistence. The plugin suite tests actual Dark Reader styling, original RES user tags on a synthetic old-Reddit page, extension disable/re-enable, named-session controls and restart persistence. It does not exercise live Reddit accounts or cloud services.
 
+Pre-publication native verification reran all **19 blocker checks and 12 plugin checks** successfully on the pinned Linux Code/Electron lane. These results cover actual native application behavior rather than just source-build fixtures.
+
 Advertising fixture domains are mapped to a loopback HTTP server; blocked requests must never reach it, and disabling protection proves those same requests can reach it. This is a scoped compatibility test, not a claim that every website or Firefox-only feature works.
 
 The launcher checks generated payload drift. The runtime is a separate copy; stop using it to return to your original application. For a guarded restoration of the copy's original entry point and removal of added payloads, use the existing playbook rollback from the repository root:

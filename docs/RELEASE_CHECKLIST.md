@@ -42,6 +42,23 @@ reviewed native runtime and run both `verify` and `verify:plugins` on Linux. Che
 sandboxing, startup protection, original uBlock controls, plugin toggles and restart.
 Other native platforms and general extension compatibility remain unverified.
 
+## Native Linux verification baseline
+
+The pre-publication rerun on the named Linux lanes passed:
+
+- VS Code browser: 19 native uBlock checks and 12 extension/session checks.
+- Screenity / Firefox 158.0 / Fabric 7.4.0: 16 checks including the real sharing
+  chooser, isolated Xvfb capture, playable recording, cancellation and cleanup.
+- Krita / OBS 30.0.2 / Qt 6.4.2: rebuilt original widget, feature/restart/launcher/
+  rollback sessions, integrity refusal and zero OBS-tracked leaks in every session.
+
+Reproduce the commands in each example guide against release inputs. These runs
+used existing isolated runtime copies and hash-verified acquired sources; they
+are not a new end-to-end acquisition/install run for every example. They do not
+verify native Windows/macOS, live Reddit accounts, production streaming, all donor
+features or the separate GIMP/GTK prototype. Keep raw results and profiles ignored.
+The Screenity tooling dependency advisory remains documented in UPSTREAMS.md.
+
 ## History and security checks
 
 Read the [focused review](SECURITY_REVIEW.md), rerun the public-file audit and
@@ -67,7 +84,8 @@ enable competing CodeQL default setup when this advanced workflow is in use.
 
 ## Windows handoff
 
-The manual **Windows core portability** Actions workflow runs recipe integrity,
+The **Windows core portability** Actions workflow, run automatically on pushes and
+pull requests and available for manual dispatch, runs recipe integrity,
 export/import and delivery regressions on a clean Windows runner. Its JSON and
 test output remain in the Actions job logs. It is not native application acceptance.
 
