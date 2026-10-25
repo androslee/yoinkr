@@ -13,6 +13,9 @@ history left behind. Entries start at the first public release.
 
 ### Fixed
 
+- Updated the optional REA ELF provider's certifi CA bundle for a critical advisory;
+  security CI and Dependabot now cover its pinned Python requirements too.
+
 - Corrected the reference recipe bundle manifest after the guide script paths changed;
   regression tests now validate the published bundle as well as fresh exports.
 

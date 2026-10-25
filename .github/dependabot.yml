@@ -37,3 +37,11 @@ updates:
     open-pull-requests-limit: 0
     commit-message:
       prefix: deps
+
+  - package-ecosystem: pip
+    directory: /scripts/general
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 0
+    commit-message:
+      prefix: deps

@@ -17,6 +17,7 @@ v0.30.0.
 
 | Issue | Path | Status |
 | --- | --- | --- |
+| Resolved critical advisory | Optional ELF provider `certifi==2026.10.18` | Updated to `2026.10.23` for GHSA-6q48-6c7w-9gw2 (CA trust advisory; patched from `2026.10.19`). The complete pinned Python requirements are now audited with pip-audit and monitored by Dependabot. |
 | High severity advisory | `rea-agents@6.7.0` pins `zod@4.4.3` | Yoinkr overrides Zod to `4.6.6`, a patched same-major release. Yoinkr's full tests and real REA analysis smoke pass with the override. Remove it when REA updates its exact pin. CI gates high advisories. |
 | Resolved moderate advisories | `aedes@0.51.3` -> `hyperid` -> `uuid` | Upgraded to `aedes@1.2.0`; broker entry points use asynchronous `Aedes.createBroker()`. A real loopback MQTT test covers retained delivery and QoS 1. |
 | Resolved advisories | `dompurify`, `markdown-it`, and `fast-uri` | Updated to `dompurify@3.4.17`, `markdown-it@14.3.3`, and patched `fast-uri` in the lockfile. |

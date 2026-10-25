@@ -57,6 +57,25 @@ hash checks, and source-build acceptance passed without an existing generated bu
 Actionlint 1.7.12 validated all workflow definitions. These local results do not
 establish that the new workflows have run on GitHub.
 
+## Hosted verification follow-up
+
+The release-preparation workflows passed on GitHub: Linux/macOS core CI across
+Node 22/24/26, secret scanning, dependency audits, browser source build, and Linux/
+macOS Screenity source builds. The Windows core run exposed a stale `GUIDE.md`
+hash in the published reference bundle after the script-directory reorganization.
+Commit `08ecaa3` repairs that reviewed manifest and adds a regression test against
+the actual published bundle. Its Windows core rerun passed. This remains core
+portability, not native Windows recipient acceptance.
+
+Enabling repository dependency alerts also exposed GHSA-6q48-6c7w-9gw2 in the
+optional ELF provider's certifi pin. It is updated to 2026.10.23, the complete
+pinned Python requirements pass pip-audit, and the patched bundle loads as a TLS
+CA store. The existing project-local ELF environment was upgraded as well.
+Scheduled security CI and Dependabot now include this Python requirements file.
+Dependency alerts and automated security-update PRs are enabled. GitHub refused
+branch rules for the current private repository without a plan upgrade; reporting,
+push protection and public CodeQL acceptance remain publication-time checks.
+
 ## Remaining release gates
 
 - Run the committed workflows on GitHub and inspect actual results. Local checks

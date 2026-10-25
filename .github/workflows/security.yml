@@ -38,7 +38,7 @@ jobs:
         run: '"$RUNNER_TEMP/yoinkr-security-tools/gitleaks" git . --log-opts="--all --full-history" --redact --ignore-gitleaks-allow --no-banner --config "$RUNNER_TEMP/yoinkr-security-tools/gitleaks.toml" --gitleaks-ignore-path /dev/null'
 
   dependencies:
-    name: all lockfile dependency audits
+    name: dependency audits
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -53,6 +53,14 @@ jobs:
       - name: Browser example audit
         if: ${{ !cancelled() }}
         run: npm audit --audit-level=high --prefix examples/ublock-vscode
+      - name: Audit optional ELF provider Python requirements
+        if: ${{ !cancelled() }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m venv "$RUNNER_TEMP/yoinkr-python-audit"
+          "$RUNNER_TEMP/yoinkr-python-audit/bin/python" -m pip install --disable-pip-version-check --only-binary=:all: pip-audit==2.10.1
+          "$RUNNER_TEMP/yoinkr-python-audit/bin/python" -m pip_audit --no-deps --disable-pip -r scripts/general/requirements-rea-elf.txt
       - name: Screenity tooling audit with documented exception
         # Existing node-forge high advisory is recorded in docs/UPSTREAMS.md.
         # Report it, gate critical findings, and do not claim this tree is clean.

@@ -59,7 +59,7 @@ credential is found, revoke/rotate it before deciding whether history cleanup is
 needed. No automated history rewriting is part of the release workflow.
 
 The **Security** workflow repeats full-history secret scanning, audits all three
-lockfiles on a schedule, and prepares CodeQL
+lockfiles and the optional ELF provider Python requirements on a schedule, and prepares CodeQL
 for JavaScript/TypeScript and GitHub Actions. CodeQL is skipped while this personal
 repository is private without a configured Code Security entitlement. Once public,
 run it manually and triage results; a skipped job is not a successful scan. Do not
