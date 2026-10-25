@@ -92,9 +92,18 @@ was reused. Lint, all 16 native capture checks and the ordinary temporary-add-on
 launcher passed; tracked source files stayed unchanged. GeckoDriver, Xvfb and OS
 libraries were supplied as documented. See the [example guide](../examples/screenity-firefox/README.md).
 
-This completes the first-run gate for that named example/platform. Other examples
-still need their own clean acquisition/install/native runs; a successful Screenity
-setup does not complete every release gate or establish Windows/macOS support.
+**uBlock Origin → VS Code browser: passed on Linux x86-64.** A new clone at
+`8505f49` installed root/example lockfiles and freshly acquired all three original
+extensions. A new stock VS Code 1.142.0 download matched Microsoft's published
+SHA-256. Build, 19 blocker checks, 12 plugin checks, the actual generated launcher,
+and guarded rollback passed. The restored Code workbench launched without the
+injected browser; original input hashes and tracked files remained unchanged.
+Playwright, OpenSSL and OS/display prerequisites were supplied separately. See the
+[browser example guide](../examples/ublock-vscode/README.md).
+
+This completes the first-run gates for those named examples/platforms. Other examples
+still need their own clean acquisition/install/native runs; these successful
+setups do not complete every release gate or establish Windows/macOS support.
 
 ## Windows handoff
 

@@ -92,6 +92,26 @@ npm run audit:firefox
 
 This source-only audit never executes the Firefox package. See the [Firefox host API plan](FIREFOX_UBLOCK_PLAN.md) for how DNS/CNAME resolution and response filtering before Chromium parses a page could be added and tested. Firefox feature parity and comparative real-website effectiveness are not claimed.
 
+## Fresh-checkout acceptance
+
+The complete first-run route was verified from a new GitHub clone at `8505f49`
+on Linux x86-64: root and example dependencies installed from their lockfiles,
+all three extension archives acquired again and checked against the recipe, and
+a new VS Code 1.142.0 archive downloaded from Microsoft. The archive matched the
+publisher's SHA-256 from the version-specific update metadata.
+
+The example built directly from stock Code, without a prepared Element demo or
+any workspace build/profile. All **19 blocker and 12 plugin checks** passed. The
+actual generated `launch-code.sh` also opened the browser and initialized all three
+extensions. Documented rollback restored the original input fingerprints, removed
+the injected host, and a real restored Code workbench launched without the Yoinkr
+browser menu. The original input and tracked checkout remained unchanged.
+
+Playwright, OpenSSL and OS/display prerequisites were supplied separately as
+documented. This completes the named Linux first-run check, not general extension
+compatibility, live Reddit acceptance, Firefox-only APIs or Windows/macOS support.
+Downloaded applications, generated profiles and raw receipts remain ignored.
+
 ## Verify and roll back
 
 For a clean-checkout source build without a real Code runtime, run `npm run acquire`

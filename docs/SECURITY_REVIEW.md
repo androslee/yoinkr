@@ -102,6 +102,17 @@ The checkout remained unchanged. Runtime/test tools and OS libraries are explici
 external prerequisites. Other examples' end-to-end first-run checks and unsupported
 platforms remain outside this result; raw receipts and applications are not tracked.
 
+## Fresh-user VS Code browser follow-up
+
+The browser example was verified from a new clone at `8505f49`, fresh lockfile
+installs and new extension downloads. A newly acquired stock VS Code 1.142.0 archive
+matched Microsoft's published SHA-256. Build, all 31 native checks and the generated
+launcher passed. Guarded rollback removed the added host and restored the original
+fingerprints; the restored stock workbench launched without the injected menu.
+Original input hashes and tracked files stayed unchanged. This used the documented
+external Playwright, OpenSSL and OS/display prerequisites. The result covers the
+named Linux route, not live Reddit, other platforms or general browser security.
+
 ## Remaining release gates
 
 - Run the committed workflows on GitHub and inspect actual results. Local checks
