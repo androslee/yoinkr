@@ -6,7 +6,7 @@ import { createRequire } from 'node:module';
 import { createServer } from 'node:net';
 import { transform } from 'esbuild';
 import { randomUUID } from 'node:crypto';
-import aedes from 'aedes';
+import { Aedes } from 'aedes';
 import mqtt from 'mqtt';
 import { sha256 } from '../../src/workspace.js';
 const root = resolve(process.env.YOINKR_PLOT_BUILD ?? process.env.MODKIT_PLOT_BUILD ?? '/tmp/mk-plot-v13'),
@@ -50,7 +50,7 @@ for (const [name, digest] of Object.entries(transfer.installedFiles))
   assert.equal(sha256(await readFile(join(host, name))), digest);
 checks.push('Every installed feature/glue file matches the transfer manifest before native execution');
 let display, app, browser, publisher;
-const broker = aedes(),
+const broker = await Aedes.createBroker(),
   server = createServer(broker.handle),
   sockets = new Set();
 server.on('connection', s => {

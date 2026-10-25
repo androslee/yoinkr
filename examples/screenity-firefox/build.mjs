@@ -25,7 +25,11 @@ try{
   await cp(upstream,join(stage,'source','screenity'),{recursive:true});
   await cp(join(root,'extension'),join(stage,'source','yoinkr','extension'),{recursive:true});
   for(const name of ['LICENSE','THIRD_PARTY_NOTICES.md'])await cp(join(upstream,name),join(stage,'extension',name));
-  for(const name of ['acquire.mjs','build.mjs','launch.mjs','firefox-path.mjs','recipe.json','package.json','package-lock.json','README.md'])await cp(join(root,name),join(stage,'source','yoinkr',name));
+  await cp(join(root,'node_modules/fabric/LICENSE'),join(stage,'extension/FABRIC-LICENSE.txt'));
+  await cp(join(root,'THIRD_PARTY_NOTICES.md'),join(stage,'extension/YOINKR-NOTICES.md'));
+  await cp(join(root,'../../LICENSE'),join(stage,'source/yoinkr/LICENSE'));
+  await cp(join(root,'node_modules/fabric/LICENSE'),join(stage,'source/yoinkr/FABRIC-LICENSE.txt'));
+  for(const name of ['acquire.mjs','build.mjs','launch.mjs','firefox-path.mjs','recipe.json','package.json','package-lock.json','README.md','THIRD_PARTY_NOTICES.md','verify-notices.mjs'])await cp(join(root,name),join(stage,'source','yoinkr',name));
   const outputHashes={};for(const name of await readdir(join(stage,'extension')))outputHashes[name]=createHash('sha256').update(await readFile(join(stage,'extension',name))).digest('hex');
   await writeFile(join(stage,'PROVENANCE.json'),JSON.stringify({...recipe,outputHashes,generatedAt:new Date().toISOString(),originalFilesUnmodified:true,changes:['New Firefox MV3 background script and action','New recording studio uses original PenTool, ArrowTool, ShapeTool, TextTool, SelectTool and History','New getDisplayMedia/canvas MediaRecorder capture backend','No original Screenity cloud/auth/telemetry or Chrome capture code included']},null,2)+'\n');
   await rm(join(local,'demo'),{recursive:true,force:true});

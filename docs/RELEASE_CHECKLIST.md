@@ -1,5 +1,23 @@
 # Release readiness
 
+## Completion status
+
+- [x] Core tests, formatting, repository hygiene and Linux/macOS/Windows core CI.
+- [x] Full-history secret scan, scoped security review and dependency monitoring.
+- [x] Browser and Screenity clean-install/native checks, with generated output ignored.
+- [x] Fresh Krita/OBS and Element source builds/native checks using documented SDK/tool prerequisites.
+- [x] License/attribution inventory; generated-output notice fixes and verification.
+- [x] MQTT distribution decision: source tooling/case study kept; generated apps and bundles excluded.
+- [x] Known Screenity tooling advisory documented with its CI exception and scope.
+- [x] Public security/branch settings and experimental source release notes prepared for review.
+- [ ] Owner authorization to make the repository public.
+- [ ] Apply public security/reporting/protection settings and verify actual public CodeQL results.
+- [ ] Publish the reviewed source-only experimental tag/release after those checks.
+
+The public-only steps cannot be reported as passed while the repository remains
+private. See [publication handoff](PUBLISHING.md). Unsupported platforms and the
+GIMP prototype are documented exclusions, not passed native acceptance.
+
 ## Reproduce from a clean checkout
 
 Run `npm ci --ignore-scripts`, `node src/cli.js doctor`, `npm test`,
@@ -101,9 +119,29 @@ injected browser; original input hashes and tracked files remained unchanged.
 Playwright, OpenSSL and OS/display prerequisites were supplied separately. See the
 [browser example guide](../examples/ublock-vscode/README.md).
 
-This completes the first-run gates for those named examples/platforms. Other examples
-still need their own clean acquisition/install/native runs; these successful
-setups do not complete every release gate or establish Windows/macOS support.
+**Krita → OBS: passed on Linux x86-64.** A new checkout at `7864e77`, plus
+reviewed release fixes, freshly acquired pinned Krita sources and compiled the
+original widgets/new host against the explicitly supplied OBS 30.0.2 / Qt 6.4.2
+SDK. A new isolated runtime passed feature (13), restart (13), rollback (2),
+ordinary launcher (15) and integrity (4) checks, with zero OBS-tracked leaks in
+every session. Generated corresponding sources retain original per-file notices
+and the full host GPL text; the actual files match the build receipt.
+
+**Element → VS Code: passed on Linux x86-64.** The same new checkout freshly
+acquired pinned sources and a new Microsoft-checksum-verified Code 1.142.0 runtime.
+All 12 native checks passed, including search highlighting and rollback. After
+preserving the full original copyright header and acquiring both offered
+open-source license texts, a second new build passed the same native suite. The
+example explicitly selects upstream's offered GPL-3.0-only alternative.
+
+These complete the first-run gates for those named examples/platforms, using the
+documented external tools and runtime libraries. They do not establish native
+Windows/macOS support. MQTT remains retained research tooling: successful private
+tests do not permit distribution of generated apps/bundles. The MQTT research build now reproduces the original frozen bundle hashes. Its
+full private replay passed 76 observations, all three donor comparisons and guarded
+rollback of both recipients, with no remaining owned app/browser processes. These
+are source-tooling checks, not a distributed integration. Public settings and
+actual public CodeQL results remain separate gates.
 
 ## Windows handoff
 

@@ -43,7 +43,7 @@ Analysis and builds run locally without model tokens. Installing dependencies an
 | [uBlock Origin → VS Code](examples/ublock-vscode/README.md) | Original uBlock, Dark Reader and adapted RES in a browser with vertical tabs and named sessions | Separate browser session; default/custom network filtering, cosmetics, scriptlets and original controls. Linux scope and checks in the example guide. |
 | [Krita → OBS](examples/krita-obs/README.md) | Original Qt triangle color selector controlling transparent live ink | Actual OBS dock, GPU scene rendering, restart and guarded rollback verified on the pinned Linux/Qt lane. RGB host; not Krita’s full paint engine. |
 | [Screenity → Firefox](examples/screenity-firefox/README.md) | Original drawing, highlighting, arrows, shapes, text and history modules | Experimental Firefox recording studio with a separate portable browser/profile. Partial port; see the example for tested capture modes and limits. |
-| [MQTT Explorer → VS Code / Joplin](examples/mqtt-raw-diff/README.md) | Recovered Raw/Diff comparison UI | Scoped Linux native adapters, original/recipient comparisons and guarded rollback. |
+| [MQTT Explorer → VS Code / Joplin](examples/mqtt-raw-diff/README.md) | Recovered Raw/Diff comparison UI | Historical verified result; source tooling retained, generated MQTT apps/bundles excluded from release. |
 | [Element → VS Code](examples/element-search/README.md) | Original message-highlighting classes | Native local transcript-search window. Does not include Matrix services or the full Element UI. |
 | [GIMP → OBS](examples/obs-annotations/README.md) | Original stroke-smoothing function | Experimental Qt dock/annotation source; compilation and numeric checks established, actual OBS/GIMP GUI acceptance pending. |
 
@@ -94,7 +94,7 @@ The regression suite uses temporary fixtures. Native and browser checks need the
 
 ## License and attribution
 
-Yoinkr is licensed under [GNU GPLv3](LICENSE). Third-party software and recovered features retain their own licenses, notices and redistribution requirements. Public examples contain acquisition recipes and host code; they do not grant new rights to donor applications. [Upstream provenance](docs/UPSTREAMS.md).
+Yoinkr is licensed under [GNU GPLv3](LICENSE). Third-party software and recovered features retain their own licenses, notices and redistribution requirements. Public examples contain acquisition recipes and host code; they do not grant new rights to donor applications. [Upstream provenance](docs/UPSTREAMS.md), [third-party notices](THIRD_PARTY_NOTICES.md) and [license review](docs/LICENSING.md).
 
 
 ## ANDRos note

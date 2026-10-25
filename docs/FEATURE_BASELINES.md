@@ -34,6 +34,8 @@ node scripts/applications/build-mqtt-donor.mjs \
 
 The builder copies tracked files, installs dependencies with lifecycle scripts disabled, explicitly acquires the declared Electron 39.2.7 runtime, and uses the donor's TypeScript 5.9.3 and webpack 5.98.0. The build uses original source/configuration in development mode. TypeScript is explicitly transpiled with `--noCheck`; this proves runtime behavior for the captured scenarios, not upstream type-check acceptance. Known upstream type-only-export warnings remain in the logs.
 
+The builder defaults to the published frozen npm locks under `recipes/mqtt-donor-inputs/`. It normalizes only webpack source-map URL identity suffixes to the recorded values, then requires the original bundle hashes. Executed module code is unchanged; a non-metadata difference still fails. `MODKIT-DONOR-BUILD.json` records before/after hashes and the normalization counts.
+
 npm can rewrite sibling lockfiles during installation. The builder snapshots the effective npm locks in `MODKIT-NPM-LOCKS/`, then restores original tracked lockfile bytes before source attestation. `MODKIT-DONOR-BUILD.json` records both original-source identity and the inputs actually resolved for this build. It also records every output and the runtime executable hash.
 
 To repeat the build with exact retained npm locks and an already acquired runtime:

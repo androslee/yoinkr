@@ -97,11 +97,14 @@ export async function buildSourceSlice(id, source, out) {
         operation: 'exact class slice; TypeScript types erased by esbuild'
       });
     }
-    const excerpt = parts.join('\n\n') + '\nexport {BaseHighlighter,HtmlHighlighter};\n';
+    const copyright = source.match(/^\/\*[\s\S]*?\*\//)?.[0];
+    if (!copyright?.includes('SPDX-License-Identifier:'))
+      throw Error('Missing original Element copyright/license header');
+    const excerpt = copyright + '\n' + parts.join('\n\n') + '\nexport {BaseHighlighter,HtmlHighlighter};\n';
     await write('transformed/highlighter.ts', excerpt);
     const { transform } = await import('esbuild');
     const compiled = await transform(excerpt, { loader: 'ts', format: 'esm', target: 'es2022', minify: false });
-    await write('payload/highlighter.js', compiled.code);
+    await write('payload/highlighter.js', copyright + '\n' + compiled.code);
     for (const name of ['search.js', 'panel.html', 'style.css', 'renderer.js', 'sample.json'])
       await write('payload/' + name, await readFile(new URL('./example-runtime/element/' + name, import.meta.url)));
   } else {
@@ -146,7 +149,7 @@ export async function buildSourceSlice(id, source, out) {
   await write('TRANSFORMS.json', JSON.stringify(transforms, null, 2) + '\n');
   await write(
     'NOTICE.md',
-    `# ${id}\n\nDonor: ${recipe.repository}, commit ${recipe.commit}.\n\n${recipe.scope}\n\nComplete acquired source and license are under originals/. Extracted source is under transformed/. Generated wrappers are Yoinkr additions. Donor licensing applies to derived output; the generated package is not declared MIT. No original desktop application was executed by this build.\n`
+    `# ${id}\n\nDonor: ${recipe.repository}, commit ${recipe.commit}.\n\n${recipe.scope}\n\nComplete acquired source and license are under originals/. Extracted source is under transformed/. Generated wrappers are Yoinkr additions. ${id === 'element-search' ? 'The original source explicitly offers AGPL-3.0-only OR GPL-3.0-only OR a commercial license. This example selects the GPL-3.0-only alternative; both acquired open-source license texts and the complete original copyright header are retained. ' : ''}Donor licensing applies to derived output; the generated package is not declared MIT. No original desktop application was executed by this build.\n`
   );
   const records = [];
   for (const p of await walk(root)) {

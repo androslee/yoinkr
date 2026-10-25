@@ -1,0 +1,60 @@
+# Source-only publication handoff
+
+The repository remains private until its owner explicitly authorizes visibility
+change. The following is a reviewable settings/release plan, not an automatic
+publication script. No generated apps, donor bundles, runtimes, profiles or raw
+verification reports are release assets. In particular, the owner excluded all
+generated MQTT Explorer integrations while retaining source tooling and a case study.
+
+## After the owner chooses public visibility
+
+Confirm the source-only scope and [release checklist](RELEASE_CHECKLIST.md), then
+change visibility deliberately in GitHub. No committed workflow changes visibility.
+GitHub public settings are unavailable on the current private/free configuration;
+do not buy a plan or weaken a guard just to bypass that distinction.
+
+Enable security/reporting and run CodeQL:
+
+```sh
+gh api --method PATCH repos/androslee/yoinkr --input .github/public-security.json
+gh api --method PUT repos/androslee/yoinkr/private-vulnerability-reporting
+gh workflow run security.yml --ref main
+```
+
+Inspect the Security workflow's actual JavaScript/TypeScript and Actions CodeQL
+results, triage findings and apply fixes before release. A skipped private-repo job
+is not a completed scan. Confirm the private reporting link in SECURITY.md opens
+and push protection is enabled. Dependency alerts and automated security PRs are
+already enabled; verify they remain on.
+
+## Protect main after checks are available
+
+Review the proposed `.github/main-protection.json`. It requires current always-run
+CI, Windows core and security checks, prevents force pushes/deletion, dismisses stale
+reviews and requires one approving review for contributors. `enforce_admins` is
+false so the sole owner retains an explicit emergency bypass; it does not make an
+unreviewed change tested or approved. Change that policy if a different maintainer
+workflow is desired.
+
+```sh
+gh api --method PUT repos/androslee/yoinkr/branches/main/protection --input .github/main-protection.json
+```
+
+After both public CodeQL lanes have passed, add their actual check names to required
+checks. Do not globally require the path-filtered Example source build workflow:
+unrelated pull requests would wait for a missing status. Recheck rule behavior on
+a normal pull request. These JSON templates do not apply themselves.
+
+## Tag and publish the experimental source release
+
+The prepared release notes are kept in the ignored local release area until reviewed.
+Use a tag matching the package version, mark the release as experimental/prerelease,
+and target the final reviewed commit after hosted checks pass. Verify that there
+are **no binary/generated assets**. GitHub's automatic source archives contain only
+tracked source, documentation, recipes and frozen build metadata.
+
+Do not publish the release before the owner authorizes that final step. Generated
+MQTT apps/bundles remain excluded regardless of successful private tests. The
+Screenity tooling advisory is a documented known issue, not a claim of a clean
+repository-wide audit. Other native platforms and the GIMP GTK prototype remain
+outside verified release claims.

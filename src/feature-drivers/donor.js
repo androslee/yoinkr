@@ -1,8 +1,8 @@
-import {join} from 'node:path';import {mkdir,writeFile} from 'node:fs/promises';import {createServer} from 'node:net';import aedes from 'aedes';import mqtt from 'mqtt';
+import {join} from 'node:path';import {mkdir,writeFile} from 'node:fs/promises';import {createServer} from 'node:net';import {Aedes} from 'aedes';import mqtt from 'mqtt';
 import {formattedMessages} from '../feature-verify.js';
 import {verifyFeatureDonor} from '../feature-electron.js';import {commonDriver,until,delay} from './common.js';
 export async function originalDonorDriver({donorRoot,out,display,playwright}){
- const verified=await verifyFeatureDonor(donorRoot);await mkdir(out,{recursive:true});const broker=aedes(),sockets=new Set(),server=createServer(broker.handle);let publisher,app,closed=false;let subscribed=false;
+ const verified=await verifyFeatureDonor(donorRoot);await mkdir(out,{recursive:true});const broker=await Aedes.createBroker(),sockets=new Set(),server=createServer(broker.handle);let publisher,app,closed=false;let subscribed=false;
  broker.on('subscribe',s=>{if(s.some(x=>x.topic==='#'))subscribed=true});server.on('connection',s=>{sockets.add(s);s.on('close',()=>sockets.delete(s))});await new Promise(r=>server.listen(0,'127.0.0.1',r));
  const cleanup=async()=>{if(closed)return;closed=true;await app?.close().catch(()=>{});if(publisher)await new Promise(r=>publisher.end(true,{},r));for(const s of sockets)s.destroy();await new Promise(r=>server.close(r));await new Promise(r=>broker.close(r))};
  try{

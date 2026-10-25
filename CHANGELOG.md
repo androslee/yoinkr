@@ -13,6 +13,13 @@ history left behind. Entries start at the first public release.
 
 ### Fixed
 
+- Reproduce frozen MQTT research builds using retained lock metadata and debug
+  source-map URL normalization, while still requiring the original bundle hashes.
+  Updated remaining native verification paths for Aedes 1.2 and compatible Joplin menu IDs.
+- Deliver and verify missing Fabric MIT and host GPL texts in generated example
+  sources; preserve Element's complete copyright header and explicitly select its
+  offered GPL license alternative.
+
 - Updated the optional REA ELF provider's certifi CA bundle for a critical advisory;
   security CI and Dependabot now cover its pinned Python requirements too.
 
@@ -46,6 +53,10 @@ history left behind. Entries start at the first public release.
   `/etc/hostname`, which does not exist on macOS.
 
 ### Added
+
+- Source-only licensing inventory, reviewed publication settings templates and
+  fresh Krita/OBS and Element/Code native acceptance. MQTT source tooling and its
+  case study remain; generated MQTT apps and bundles are excluded from releases.
 
 - Windows core portability now runs automatically on pushes and pull requests.
 - Updated native acceptance scope after successful uBlock/plugin, real Screenity

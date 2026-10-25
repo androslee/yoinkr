@@ -13,4 +13,4 @@ Launch the generated recipient using its launcher; open **Yoinkr messages → Op
 
 [Complete setup, input format, rollback and native verification](../../docs/CREATOR_EXAMPLES.md). [Pinned recovery recipe](../../recipes/element-search/recovery.json).
 
-Twelve scoped Linux native checks were run during development. Full original Element baseline, live Matrix and Windows/macOS remain unverified. Original Element sources retain AGPL licensing; keep their notices and corresponding source when distributing derived output. Generated application copies are not tracked in Git.
+Twelve scoped Linux native checks were run during development. Full original Element baseline, live Matrix and Windows/macOS remain unverified. The pinned source explicitly offers AGPL-3.0-only OR GPL-3.0-only OR a commercial license. This example selects the GPL-3.0-only alternative and retains the complete copyright header, original files and both acquired open-source license texts; keep the notices and corresponding source when distributing derived output. Generated application copies are not tracked in Git.

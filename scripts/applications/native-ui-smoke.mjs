@@ -2,7 +2,7 @@ import { verificationOutput } from '../general/verification-output.mjs';
 const verificationDirectory = await verificationOutput('native-ui');
 import { readFile, mkdir, writeFile } from 'node:fs/promises';
 import { createServer } from 'node:net';
-import aedes from 'aedes';
+import { Aedes } from 'aedes';
 import mqtt from 'mqtt';
 import assert from 'node:assert/strict';
 const { chromium } = await import(process.env.PLAYWRIGHT_MODULE ?? 'playwright');
@@ -17,7 +17,7 @@ const browser = await chromium.connectOverCDP(url),
 assert.ok(page, 'native application window exists');
 const errors = [];
 page.on('pageerror', e => errors.push(e.message));
-const broker = aedes(),
+const broker = await Aedes.createBroker(),
   server = createServer(broker.handle),
   sockets = new Set();
 server.on('connection', s => {

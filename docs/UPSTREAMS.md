@@ -39,7 +39,7 @@ The included donor/recipient test code and SVG asset are original fixtures. Thei
 
 ## v0.4 real donor and recipient
 
-MQTT Explorer official revision `35f31973c456a024a37450f5961e4610dc9a9ce0`: https://github.com/thomasnordquist/MQTT-Explorer . Actual REA-traced source and selected supporting files are retained unchanged in private case exports. Package metadata says CC-BY-SA-4.0 while LICENSE.md says CC-BY-ND-4.0; both facts and the original license are retained. The native host is a local working-copy demonstration; it is not published to a marketplace. Generated bundle metadata lists the explicit TypeScript barrel-import adaptation and new host glue.
+MQTT Explorer official revision `35f31973c456a024a37450f5961e4610dc9a9ce0`: https://github.com/thomasnordquist/MQTT-Explorer . Actual REA-traced source and selected supporting files are retained unchanged in private case exports. Package metadata says CC-BY-SA-4.0 while LICENSE.md says CC-BY-ND-4.0; both facts and the original license are retained. The native host is a local working-copy demonstration; generated MQTT apps/bundles are excluded from releases. Source tooling and the historical result remain documented. No upstream contact or license clarification is being requested. Generated bundle metadata lists the explicit TypeScript barrel-import adaptation and new host glue.
 
 Installed VS Code 1.142.0 supplies the recipient application and MIT-labeled Markdown preview CSS. Original application license/notices stay in its copy; the CSS source headers and hashes are retained. The native recipient Evidence is explicitly a startup source slice.
 

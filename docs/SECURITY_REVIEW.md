@@ -113,6 +113,25 @@ Original input hashes and tracked files stayed unchanged. This used the document
 external Playwright, OpenSSL and OS/display prerequisites. The result covers the
 named Linux route, not live Reddit, other platforms or general browser security.
 
+## Source-only release follow-up
+
+Fresh Linux builds of Krita/OBS and Element/Code passed native acceptance from a
+new checkout with freshly acquired pinned donor sources and application inputs;
+external SDK/test tools were supplied explicitly. The release checklist records
+exact scope and counts. Generated Screenity outputs now retain Fabric's full MIT
+text, and its CI verifies actual notice files and integrity coverage. Krita's
+corresponding sources include the full host GPL text. Element preserves its full
+original copyright header and selects an explicitly offered GPL alternative.
+
+MQTT source tooling and the historical case study remain public source; generated
+MQTT apps/bundles are excluded from releases by owner decision. Its conflicting
+upstream declarations are unresolved and no maintainer contact is authorized.
+Frozen dependency locks and source-map URL normalization reproduce the original
+recipe bundle hashes without changing executed module code or relaxing pins.
+The old donor dependencies are isolated research inputs, not production advice.
+Native research checks also exposed stale Aedes startup and Joplin menu identifiers;
+these are corrected without changing the pinned recipient runtime or expectations.
+
 ## Remaining release gates
 
 - Run the committed workflows on GitHub and inspect actual results. Local checks
@@ -120,8 +139,8 @@ named Linux route, not live Reddit, other platforms or general browser security.
 - CodeQL is prepared for JavaScript/TypeScript and Actions but is skipped while
   this personal repository remains private without a configured entitlement.
   After publication, run the Security workflow manually and triage all findings.
-- Complete fresh-user native acceptance for showcased examples. Keep platform
-  claims limited to the explicitly verified bindings.
+- Keep native claims limited to the named fresh-user Linux checks and explicitly
+  verified bindings; other native platforms remain unverified.
 - Review donor licenses, source/notice delivery and product branding. Recipes do
   not grant permission to redistribute upstream software.
 - Configure repository settings and private reporting using the

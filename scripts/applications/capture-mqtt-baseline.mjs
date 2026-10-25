@@ -4,7 +4,7 @@ import { writeFile, readFile } from 'node:fs/promises';
 import { resolve, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { cpus, platform, arch, totalmem } from 'node:os';
-import aedes from 'aedes';
+import { Aedes } from 'aedes';
 import mqtt from 'mqtt';
 import { prepareFeatureSession } from '../../src/feature-session.js';
 import { runOriginalFeatureBaseline } from '../../src/feature-electron.js';
@@ -63,7 +63,7 @@ export async function captureMqttBaseline({
         : [])
     ]
   });
-  const broker = aedes(),
+  const broker = await Aedes.createBroker(),
     sockets = new Set(),
     server = createServer(broker.handle),
     root = session.directory;

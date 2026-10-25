@@ -98,7 +98,7 @@ Timing samples cover approximately 1, 10 and 100 KiB combined comparisons. They 
 
 ## Sharing
 
-Public code consists of Yoinkr's tooling, adapters, tests and hash-pinned recipe. Generated donor packages, build copies, reports and Evidence remain ignored private outputs. MQTT Explorer's input `LICENSE.md` names Creative Commons Attribution-NoDerivatives 4.0 and contains its own distribution/attribution conditions; its exact bytes and dependency notices are retained. Do not treat Yoinkr's MIT license as permission to redistribute generated donor-derived packages. Distribution status is explicitly marked for review. No GitHub publication or application installation change happens during package preparation.
+Public code consists of Yoinkr's tooling, adapters, tests and hash-pinned recipe. Generated donor packages, build copies, reports and Evidence remain ignored private outputs. MQTT Explorer's input `LICENSE.md` names Creative Commons Attribution-NoDerivatives 4.0 and contains its own distribution/attribution conditions; its exact bytes and dependency notices are retained. Do not treat Yoinkr's GPL-3.0-only license as permission to redistribute generated donor-derived packages. Generated MQTT apps and bundles are excluded from release; source tooling and the historical case study remain. No GitHub publication or application installation change happens during package preparation.
 
 Milestone 19 now supplies the [first real VS Code recipient adapter](FEATURE_HOSTS.md) using this frozen package. Milestone 21 must then reuse the same accepted package digest in Joplin.
 

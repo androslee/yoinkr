@@ -36,6 +36,8 @@ jobs:
         run: npm run acquire
       - name: Build the recovered extension from a fresh checkout
         run: npm run build
+      - name: Verify generated license and attribution delivery
+        run: node verify-notices.mjs
       - name: Lint the Firefox extension
         run: node node_modules/web-ext/bin/web-ext.js lint --source-dir .local/demo/extension
       # This builds original sources on both systems. It does not launch Firefox,

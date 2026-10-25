@@ -5,6 +5,7 @@ import { execFileSync, spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { sha256, saveJson, newDestination, containedFile } from '../../src/workspace.js';
 import { safeRelative } from '../../src/research.js';
+import { normalizeMqttBuild } from './mqtt-build-inputs.mjs';
 export const MQTT_REVISION = '35f31973c456a024a37450f5961e4610dc9a9ce0';
 async function run(command, args, { cwd, log, environment = {}, timeoutMs = 300000 } = {}) {
   const handle = await open(log, 'wx', 0o600);
@@ -49,7 +50,11 @@ async function files(root, prefix) {
 export async function attestMqttDonor(
   source,
   built,
-  { commands = [], dependencyInstallation = 'npm --ignore-scripts --legacy-peer-deps' } = {}
+  {
+    commands = [],
+    dependencyInstallation = 'npm --ignore-scripts --legacy-peer-deps',
+    sourceMapNormalization = null
+  } = {}
 ) {
   const repo = await realpath(source),
     root = await realpath(built),
@@ -101,6 +106,7 @@ export async function attestMqttDonor(
       sha256: runtimeHash
     },
     dependencyInstallation,
+    sourceMapNormalization,
     commands,
     limitations: [
       'Known upstream webpack type-only-export warnings retained in build logs.',
@@ -115,6 +121,14 @@ export async function buildMqttDonor({ source, out, locks, offline = false } = {
   if (process.platform !== 'linux' || process.arch !== 'x64')
     throw Error('reference donor builder currently supports Linux x86-64 only');
   if (offline && !locks) throw Error('--offline requires a prior attested --locks build with cached Electron runtime');
+  const reference = fileURLToPath(new URL('../../recipes/mqtt-donor-inputs/', import.meta.url));
+  const recipe = JSON.parse(await readFile(new URL('../../recipes/mqtt-raw-diff/recipe.json', import.meta.url)));
+  locks ||= reference;
+  for (const name of ['MODKIT-NPM-LOCKS/root.json', 'MODKIT-NPM-LOCKS/renderer.json']) {
+    const expected = recipe.inputs.find(f => f.path === name)?.sha256;
+    if (!expected || sha256(await readFile(await containedFile(await realpath(locks), name))) !== expected)
+      throw Error('Donor dependency lock differs from frozen recipe: ' + name);
+  }
   const repo = await realpath(resolve(source));
   if (
     execFileSync('git', ['-C', repo, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim() !== MQTT_REVISION ||
@@ -204,7 +218,8 @@ export async function buildMqttDonor({ source, out, locks, offline = false } = {
       environment: step.env
     });
   }
-  return attestMqttDonor(repo, dest, { commands });
+  const sourceMapNormalization = await normalizeMqttBuild(dest, reference, recipe);
+  return attestMqttDonor(repo, dest, { commands, sourceMapNormalization });
 }
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const args = process.argv.slice(2),

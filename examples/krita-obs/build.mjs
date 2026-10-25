@@ -19,6 +19,8 @@ try{
   await cp(join(root,'native'),join(stage,'source'),{recursive:true});
   await cp(join(root,'compat'),join(stage,'source/compat'),{recursive:true});
   await cp(upstream,join(stage,'source/donor'),{recursive:true});
+  await cp(join(root,'../../LICENSE'),join(stage,'source/rebuild/LICENSE'));
+  await writeFile(join(stage,'source/NOTICE.md'),'# Yoinkr Krita to OBS source\n\nOriginal Krita files and LGPL notices are retained unchanged under donor/. New host/compatibility code is GPL-3.0-only; see rebuild/LICENSE. Complete supplied build sources and input hashes accompany this module. OBS, Qt and runtime libraries retain their own terms.\n');
   for(const name of ['recipe.json','acquire.mjs','build.mjs','launch.mjs','prepare.mjs','rollback.mjs','verify.mjs','README.md','package.json','preview.png','launch-obs.sh'])try{await cp(join(root,name),join(stage,'source/rebuild',name));}catch(error){if(error.code!=='ENOENT')throw error;}
   const source=join(stage,'source');
   const flags=['-std=c++17','-O2','-fPIC','-fvisibility=hidden','-Wno-deprecated-declarations',...includes.map(path=>'-I'+path),'-I'+join(source,'compat'),'-I'+join(source,'donor/libs/widgets'),'-I'+join(source,'donor/libs/pigment')];
