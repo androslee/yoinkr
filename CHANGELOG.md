@@ -13,6 +13,9 @@ history left behind. Entries start at the first public release.
 
 ### Fixed
 
+- Browser example builds now refuse an existing output directory before adding files;
+  source-build acceptance covers caller-data preservation and guarded rollback.
+
 - Upgraded Aedes to 1.2.0 and adopted its asynchronous broker initialization,
   resolving the remaining moderate UUID dependency findings.
 - Added regression checks for full macOS Firefox bundle copies and fresh unbuilt
@@ -37,6 +40,11 @@ history left behind. Entries start at the first public release.
   `/etc/hostname`, which does not exist on macOS.
 
 ### Added
+
+- Full-history secret scanning, CodeQL configuration for public repositories, and
+  browser-example dependency/format/build CI with a synthetic runtime.
+- Contributor guidance, issue/PR templates and a scoped pre-publication security
+  review with explicit remaining release gates.
 
 - A source-built VS Code research-browser example with original MV2 uBlock Origin,
   Dark Reader, adapted RES, vertical tabs, visible plugin enable/disable switches

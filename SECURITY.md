@@ -14,6 +14,19 @@ reaches a real application install, say so explicitly so it is not run casually.
 Expect an acknowledgement within a week. Yoinkr is an experimental single-maintainer
 project, so please allow reasonable time for a fix before public disclosure.
 
+## Trust and execution model
+
+Recovered code and verification modules run with your normal user permissions;
+subprocess time/output limits are not a hostile-code sandbox. Review recipes and
+payloads before running them, and use a disposable VM/container for unfamiliar
+inputs. Hashes bind files to reviewed metadata; they do not authenticate a malicious
+recipe and payload supplied together. Browser tabs have a separate sandbox/IPC
+boundary, while pinned browser extensions are trusted code with access to pages.
+
+See the scoped [pre-publication review](docs/SECURITY_REVIEW.md) and its remaining
+release gates. Automated scans supplement review and do not certify the project
+as vulnerability-free.
+
 ## What is in scope
 
 Yoinkr reads other applications, patches copies of them, and runs recovered code,

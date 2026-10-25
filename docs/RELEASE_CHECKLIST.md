@@ -22,6 +22,49 @@ advisory through web-ext's Android tooling. Its CI audit gates critical findings
 and logs the known high findings. See [upstream status](UPSTREAMS.md); do not describe
 the entire repository's dependencies as clean based on the root audit alone.
 
+## Browser example source and native checks
+
+The always-running **browser example source build** CI job installs and audits the
+separate browser lockfile, checks its source formatting, acquires pinned archives,
+and exercises bundling, existing-output refusal, unchanged inputs, drift refusal
+and rollback using a synthetic runtime. Reproduce it locally:
+
+```sh
+cd examples/ublock-vscode
+npm ci --ignore-scripts
+npm run acquire
+npm run verify:build
+```
+
+It does not start Code or establish extension behavior. Before a browser release,
+follow the [example guide](../examples/ublock-vscode/README.md) to build from a clean,
+reviewed native runtime and run both `verify` and `verify:plugins` on Linux. Check
+sandboxing, startup protection, original uBlock controls, plugin toggles and restart.
+Other native platforms and general extension compatibility remain unverified.
+
+## History and security checks
+
+Read the [focused review](SECURITY_REVIEW.md), rerun the public-file audit and
+review all fetched branch/tag history before changing visibility. With a trusted
+Gitleaks CLI (CI pins version 8.30.1 and its Linux archive SHA-256):
+
+```sh
+git fetch origin --prune --tags
+gitleaks git . --log-opts="--all --full-history" --redact --ignore-gitleaks-allow --no-banner
+```
+
+Inspect historical filenames for private material too; deleting a file from main
+does not delete its history. Do not paste scanner findings into public logs. If a
+credential is found, revoke/rotate it before deciding whether history cleanup is
+needed. No automated history rewriting is part of the release workflow.
+
+The **Security** workflow repeats full-history secret scanning, audits all three
+lockfiles on a schedule, and prepares CodeQL
+for JavaScript/TypeScript and GitHub Actions. CodeQL is skipped while this personal
+repository is private without a configured Code Security entitlement. Once public,
+run it manually and triage results; a skipped job is not a successful scan. Do not
+enable competing CodeQL default setup when this advanced workflow is in use.
+
 ## Windows handoff
 
 The manual **Windows core portability** Actions workflow runs recipe integrity,
@@ -55,8 +98,15 @@ Advanced Security and confirm the form linked by SECURITY.md opens. While privat
 that public reporting channel is unavailable; agree on a private maintainer contact
 with collaborators instead of posting vulnerability details in issues.
 
+Enable secret-scanning push protection, Dependabot alerts/security updates, and
+private vulnerability reporting. Public secret scanning is automatic, but review
+the Security tab and confirm the reporting form linked by SECURITY.md works.
+CodeQL uses hosted GitHub analysis; Gitleaks runs on the Actions runner. Neither
+requires an AI-model API key. Local Gitleaks scans do not send source to a service.
+
 Configure a main-branch rule requiring the CI matrix, repository hygiene,
-self-contained smoke checks and dependency audit before merge; prevent force pushes
+self-contained smoke checks, dependency audit, browser example source build and
+full-history secret scan before merge; prevent force pushes
 and branch deletion. GitHub currently requires a paid plan for these rules on a
 private repository, while public repositories can use them on Free. Keep conditional
 example-build checks out of globally required checks unless their workflow always
@@ -67,3 +117,15 @@ implementing removals. No removal date is enacted by merging that proposal.
 
 References: [private vulnerability reporting](https://docs.github.com/en/code-security/how-tos/report-and-fix-vulnerabilities/configure-vulnerability-reporting/configure-for-a-repository),
 [protected branches](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches).
+
+## Release candidate
+
+- Try installation/build instructions from a fresh checkout; do not rely on local
+  ignored downloads, dependencies, profiles or previous generated outputs.
+- Review licenses/notices for each showcased transfer and keep unsupported features
+  explicit. In particular, do not redistribute prepared donor applications merely
+  because the build recipe is public.
+- Resolve or explicitly document remaining dependency findings and platform gaps.
+- After hosted checks pass, create an experimental release tag and notes describing
+  capabilities, supported platforms, known issues and reproduction instructions.
+  Publication/tag creation is a separate deliberate step, not done by these checks.

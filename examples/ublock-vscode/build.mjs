@@ -39,7 +39,9 @@ for (const name of [
   'resources/app/' + pkg.main.slice(2)
 ])
   fingerprints[name] = sha256(await readFile(await containedFile(runtime, name)));
-await mkdir(dest, { recursive: true });
+// Claim a fresh output atomically; never add files to an existing caller directory.
+await mkdir(dirname(dest), { recursive: true });
+await mkdir(dest, { mode: 0o700 });
 const book = join(dest, 'playbook');
 await mkdir(book);
 const files = [];
@@ -127,6 +129,7 @@ for (const name of [
   'acquire.mjs',
   'verify.mjs',
   'verify-plugins.mjs',
+  'verify-build.mjs',
   'audit-firefox.mjs',
   'README.md',
   'FIREFOX_UBLOCK_PLAN.md',

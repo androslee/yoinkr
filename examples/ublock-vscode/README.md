@@ -94,6 +94,13 @@ This source-only audit never executes the Firefox package. See the [Firefox host
 
 ## Verify and roll back
 
+For a clean-checkout source build without a real Code runtime, run `npm run acquire`
+and `npm run verify:build` after installing root and example dependencies. CI runs
+this check on Linux: it bundles the real host and pinned archives using a synthetic
+application fixture, verifies unchanged inputs, existing-output refusal, drift
+refusal and rollback, and never launches Electron. Native checks below are still
+required to verify actual browser and extension behavior.
+
 Install Playwright in your chosen local tooling directory, then set `PLAYWRIGHT_MODULE` to its absolute `playwright/index.mjs` path. No Playwright browser download is needed: the test launches the supplied Code executable. A working Linux display and sandbox support are required. The plugin suite also uses `openssl` to create a short-lived test certificate; only its public-key fingerprint is allowed for that test process. Production TLS verification is unchanged.
 
 ```sh

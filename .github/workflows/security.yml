@@ -1,0 +1,86 @@
+name: Security
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: '31 8 * * 1'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  secrets:
+    name: full-history secret scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Install checksum-pinned Gitleaks CLI
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/yoinkr-security-tools"
+          curl --fail --location --retry 3 --max-time 120 --output "$RUNNER_TEMP/yoinkr-security-tools/gitleaks.tar.gz" https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz
+          echo "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb  $RUNNER_TEMP/yoinkr-security-tools/gitleaks.tar.gz" | sha256sum --check
+          tar -xzf "$RUNNER_TEMP/yoinkr-security-tools/gitleaks.tar.gz" -C "$RUNNER_TEMP/yoinkr-security-tools" gitleaks
+          # Use the scanner's default rules, regardless of repository-supplied
+          # config or fingerprint ignore files added by a pull request.
+          printf '[extend]\nuseDefault = true\n' > "$RUNNER_TEMP/yoinkr-security-tools/gitleaks.toml"
+      - name: Scan every fetched branch and tag
+        # No third-party action license key, no credential values in logs, and no
+        # public report upload. An inline allow comment cannot bypass this gate.
+        run: '"$RUNNER_TEMP/yoinkr-security-tools/gitleaks" git . --log-opts="--all --full-history" --redact --ignore-gitleaks-allow --no-banner --config "$RUNNER_TEMP/yoinkr-security-tools/gitleaks.toml" --gitleaks-ignore-path /dev/null'
+
+  dependencies:
+    name: all lockfile dependency audits
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+      - name: Root audit
+        run: npm audit --audit-level=high
+      - name: Browser example audit
+        if: ${{ !cancelled() }}
+        run: npm audit --audit-level=high --prefix examples/ublock-vscode
+      - name: Screenity tooling audit with documented exception
+        # Existing node-forge high advisory is recorded in docs/UPSTREAMS.md.
+        # Report it, gate critical findings, and do not claim this tree is clean.
+        if: ${{ !cancelled() }}
+        run: npm audit --audit-level=critical --prefix examples/screenity-firefox
+
+  codeql:
+    # This private personal repository has no Code Security entitlement configured.
+    # Enable automatically once public; do not change visibility just to run a scan.
+    if: github.event.repository.private == false
+    name: CodeQL (${{ matrix.language }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [javascript-typescript, actions]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: github/codeql-action/init@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: none
+      - uses: github/codeql-action/analyze@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        with:
+          category: /language:${{ matrix.language }}

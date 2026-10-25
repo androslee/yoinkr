@@ -10,7 +10,8 @@
     "start": "node launch.mjs",
     "verify": "node verify.mjs",
     "verify:plugins": "node verify-plugins.mjs",
-    "audit:firefox": "node audit-firefox.mjs"
+    "audit:firefox": "node audit-firefox.mjs",
+    "verify:build": "node verify-build.mjs"
   },
   "dependencies": {
     "electron-chrome-extensions": "4.9.0",

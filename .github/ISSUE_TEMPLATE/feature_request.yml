@@ -1,0 +1,17 @@
+name: Feature or transfer request
+description: Propose a bounded feature transfer or improvement.
+body:
+  - type: textarea
+    id: feature
+    attributes:
+      label: What would you like to do?
+      description: For transfers, name donor and recipient applications, exact feature, framework and known source/license.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: What would demonstrate success?
+      description: Describe observable behavior, platform and an example workflow.
+    validations:
+      required: true

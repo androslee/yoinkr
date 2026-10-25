@@ -88,6 +88,8 @@ An extension, source module, rendered UI and native component are different tran
 npm test
 ```
 
+See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, checks and pull-request guidance.
+
 The regression suite uses temporary fixtures. Native and browser checks need the runtimes/tools documented in each example and write local results. Historical development receipts are not bundled; reproduce the relevant checks rather than assuming a missing local screenshot exists in a fresh checkout.
 
 ## License and attribution

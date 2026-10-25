@@ -1,0 +1,25 @@
+name: Bug report
+description: Report a reproducible Yoinkr problem. Report vulnerabilities privately instead.
+body:
+  - type: markdown
+    attributes:
+      value: Do not include credentials, browser profiles, private donor files or security exploit details. See SECURITY.md for private vulnerability reporting.
+  - type: input
+    id: environment
+    attributes:
+      label: Versions and platform
+      description: Yoinkr commit/version, operating system, Node, donor and recipient versions.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps and expected/actual behavior
+      description: Include the command and a minimal synthetic reproduction where possible.
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant sanitized output
+      description: Remove credentials and personal paths. Keep raw reports local.

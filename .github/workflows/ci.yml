@@ -141,3 +141,31 @@ jobs:
       # drifted lockfile a named failure rather than a confusing install error.
       - name: Lockfile matches manifest
         run: npm ci --ignore-scripts --dry-run
+
+  browser-source:
+    # Always runs so this can safely be a required branch check. No real browser or
+    # donor application is executed; native acceptance remains a separate gate.
+    name: browser example source build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+      - name: Install root and browser build tooling
+        run: |
+          npm ci --ignore-scripts
+          npm ci --ignore-scripts --prefix examples/ublock-vscode
+      - name: Audit browser dependencies
+        run: npm audit --audit-level=high --prefix examples/ublock-vscode
+      - name: Check browser source formatting
+        run: ./node_modules/.bin/prettier --ignore-path /dev/null --check 'examples/ublock-vscode/*.{mjs,json}' 'examples/ublock-vscode/runtime/*.{cjs,js,html,css}'
+      - name: Acquire hash-pinned extension archives
+        working-directory: examples/ublock-vscode
+        run: npm run acquire
+      - name: Build and verify using a synthetic application fixture
+        working-directory: examples/ublock-vscode
+        run: npm run verify:build
