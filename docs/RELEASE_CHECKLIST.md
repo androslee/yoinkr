@@ -10,13 +10,17 @@
 - [x] MQTT distribution decision: source tooling/case study kept; generated apps and bundles excluded.
 - [x] Known Screenity tooling advisory documented with its CI exception and scope.
 - [x] Public security/branch settings and experimental source release notes prepared for review.
-- [ ] Owner authorization to make the repository public.
+- [x] Owner authorization to make the repository public (2026-10-25).
 - [ ] Apply public security/reporting/protection settings and verify actual public CodeQL results.
 - [ ] Publish the reviewed source-only experimental tag/release after those checks.
 
-The public-only steps cannot be reported as passed while the repository remains
-private. See [publication handoff](PUBLISHING.md). Unsupported platforms and the
-GIMP prototype are documented exclusions, not passed native acceptance.
+The repository became public on 2026-10-25. Secret-scanning push protection,
+private vulnerability reporting, Dependabot updates and the prepared main-branch
+protections are enabled. Public CodeQL found two items; the follow-up hardens CDP
+identifier encoding and clarifies a literal-markup test assertion. Final analysis
+of the corrected candidate and release publication remain pending below.
+See [publication handoff](PUBLISHING.md). Unsupported platforms and the GIMP
+prototype are documented exclusions, not passed native acceptance.
 
 ## Reproduce from a clean checkout
 
@@ -95,9 +99,8 @@ needed. No automated history rewriting is part of the release workflow.
 
 The **Security** workflow repeats full-history secret scanning, audits all three
 lockfiles and the optional ELF provider Python requirements on a schedule, and prepares CodeQL
-for JavaScript/TypeScript and GitHub Actions. CodeQL is skipped while this personal
-repository is private without a configured Code Security entitlement. Once public,
-run it manually and triage results; a skipped job is not a successful scan. Do not
+for JavaScript/TypeScript and GitHub Actions. CodeQL runs on the public repository for JavaScript/TypeScript and Actions.
+Inspect actual findings; a skipped job is not a successful scan. Do not
 enable competing CodeQL default setup when this advanced workflow is in use.
 
 ## Fresh-user example acceptance

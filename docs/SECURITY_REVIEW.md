@@ -73,8 +73,9 @@ pinned Python requirements pass pip-audit, and the patched bundle loads as a TLS
 CA store. The existing project-local ELF environment was upgraded as well.
 Scheduled security CI and Dependabot now include this Python requirements file.
 Dependency alerts and automated security-update PRs are enabled. GitHub refused
-branch rules for the current private repository without a plan upgrade; reporting,
-push protection and public CodeQL acceptance remain publication-time checks.
+branch rules while the repository was private without a plan upgrade. The owner
+authorized publication on 2026-10-25; reporting, push protection and the prepared
+branch rules are now enabled.
 
 ## Native Linux follow-up
 

@@ -1,8 +1,8 @@
 # Source-only publication handoff
 
-The repository remains private until its owner explicitly authorizes visibility
-change. The following is a reviewable settings/release plan, not an automatic
-publication script. No generated apps, donor bundles, runtimes, profiles or raw
+The owner authorized public visibility and source-only publication on 2026-10-25.
+The repository is now public. The commands below document the reviewed settings
+and release procedure; they are not an automatic publication script. No generated apps, donor bundles, runtimes, profiles or raw
 verification reports are release assets. In particular, the owner excluded all
 generated MQTT Explorer integrations while retaining source tooling and a case study.
 
@@ -10,8 +10,8 @@ generated MQTT Explorer integrations while retaining source tooling and a case s
 
 Confirm the source-only scope and [release checklist](RELEASE_CHECKLIST.md), then
 change visibility deliberately in GitHub. No committed workflow changes visibility.
-GitHub public settings are unavailable on the current private/free configuration;
-do not buy a plan or weaken a guard just to bypass that distinction.
+These public settings are now enabled. Before publication they were unavailable
+on the private/free configuration; no plan upgrade was purchased.
 
 Enable security/reporting and run CodeQL:
 

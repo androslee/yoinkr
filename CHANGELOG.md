@@ -11,6 +11,14 @@ history left behind. Entries start at the first public release.
 
 ## [Unreleased]
 
+## [0.30.0] - 2026-10-25
+
+First public experimental source release. Includes bounded investigation/recovery
+and host adapters, the VS Code browser, Screenity/Firefox, Krita/OBS and
+Element/Code examples. MQTT remains a research case study with source tooling;
+generated MQTT apps and bundles are excluded. See `docs/FRAMEWORK_SUPPORT.md`
+for verified lanes and limits.
+
 ### Fixed
 
 - Hardened CDP wrapper identifiers against script-closing markup and Unicode line
@@ -102,11 +110,3 @@ history left behind. Entries start at the first public release.
   no behavior change, and excluded payload trees are byte-identical.
 - `scripts/README.md` records which checks CI gates and which scripts have no npm alias.
 - `docs/UPSTREAMS.md` tracks known upstream dependency issues.
-
-## [0.30.0]
-
-First public release. Investigation workbench, CLI, recipe-driven host adapters and
-optional MCP tools, with verified transfers on the Linux x86-64 lane for Electron
-(MQTT Explorer to VS Code and Joplin), Qt Widgets (Krita to OBS), Firefox
-WebExtensions (Screenity) and a native C ABI component bridge. See
-`docs/FRAMEWORK_SUPPORT.md` for the full scope and its limits.
